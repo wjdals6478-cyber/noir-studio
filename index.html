@@ -71,7 +71,7 @@
       justify-content: center;
       align-items: center;
       gap: 10px;
-      margin-top: 8px;
+      margin-top: 10px;
     }
 
     .credit-badge {
@@ -84,7 +84,10 @@
       border-radius: 20px;
       font-size: 0.8rem;
       color: #c084fc;
+      cursor: pointer;
+      transition: all 0.2s;
     }
+    .credit-badge:hover { border-color: var(--accent-purple); }
 
     .plan-badge {
       display: inline-flex;
@@ -96,6 +99,7 @@
       font-size: 0.8rem;
       color: #e9d5ff;
       font-weight: 600;
+      cursor: pointer;
     }
 
     .panel-left {
@@ -211,7 +215,6 @@
     }
     img, video { max-width: 100%; max-height: 480px; border-radius: 8px; }
 
-    /* 🏷️ 화면 프리뷰 우측 하단 워터마크 스타일 */
     .watermark-overlay {
       position: absolute;
       bottom: 24px;
@@ -278,7 +281,6 @@
       font-weight: bold;
     }
 
-    /* 📜 푸터 저작권 문구 */
     .footer {
       grid-column: 1 / -1;
       text-align: center;
@@ -287,6 +289,66 @@
       font-size: 0.75rem;
       color: var(--text-sub);
     }
+
+    /* 💳 결제 팝업 모달 스타일 */
+    .modal-backdrop {
+      position: fixed;
+      top: 0; left: 0; width: 100vw; height: 100vh;
+      background: rgba(0,0,0,0.85);
+      backdrop-filter: blur(8px);
+      display: none;
+      justify-content: center;
+      align-items: center;
+      z-index: 999;
+    }
+    .modal-card {
+      background: #14141c;
+      border: 1px solid #2e2e3e;
+      border-radius: 20px;
+      width: 90%;
+      max-width: 500px;
+      padding: 32px 24px;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.9);
+      position: relative;
+    }
+    .close-btn {
+      position: absolute;
+      top: 16px; right: 20px;
+      background: none; border: none;
+      color: #71717a; font-size: 1.5rem;
+      cursor: pointer;
+    }
+    .pricing-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+      margin-top: 20px;
+    }
+    .price-card {
+      background: #0a0a0f;
+      border: 1px solid #22222a;
+      border-radius: 14px;
+      padding: 20px 16px;
+      text-align: center;
+    }
+    .price-card.pro {
+      border-color: var(--accent-purple);
+      box-shadow: 0 0 20px rgba(157, 78, 221, 0.2);
+    }
+    .plan-title { font-size: 1rem; font-weight: bold; margin-bottom: 8px; }
+    .plan-price { font-size: 1.3rem; font-weight: 800; color: #fff; margin-bottom: 12px; }
+    .plan-features { font-size: 0.75rem; color: #a1a1aa; text-align: left; margin-bottom: 16px; line-height: 1.6; }
+    .pay-btn {
+      width: 100%;
+      padding: 10px;
+      border-radius: 8px;
+      border: none;
+      font-weight: bold;
+      cursor: pointer;
+      font-size: 0.8rem;
+    }
+    .pay-btn-free { background: #272730; color: #888; }
+    .pay-btn-pro { background: var(--accent-purple); color: #fff; }
   </style>
 </head>
 <body>
@@ -296,12 +358,11 @@
     <h1>NOIR STUDIO</h1>
     <p>PHOTOREALISTIC AI & MOTION GENERATOR</p>
     <div class="header-badges">
-      <div class="credit-badge">⚡ 잔여 크레딧: 150 CR</div>
-      <div class="plan-badge" id="planBadge">FREE PLAN (워터마크 적용)</div>
+      <div class="credit-badge" onclick="openModal()">⚡ 잔여 크레딧: 150 CR</div>
+      <div class="plan-badge" id="planBadge" onclick="openModal()">FREE PLAN (워터마크 적용)</div>
     </div>
   </div>
 
-  <!-- 왼쪽 패널 -->
   <div class="panel-left">
     <div class="form-group">
       <div class="label-row">
@@ -330,14 +391,12 @@
     <div class="status-text" id="statusText">프롬프트를 입력하고 생성을 진행하세요.</div>
   </div>
 
-  <!-- 오른쪽 패널 -->
   <div class="panel-right">
     <div class="preview-box" id="previewBox">
       <p style="color: #3f3f46; font-size: 0.85rem;">결과물이 이 스크린에 표시됩니다.</p>
     </div>
   </div>
 
-  <!-- 보관함 -->
   <div class="history-section">
     <div class="history-header">
       <h2>WORK HISTORY (보관함)</h2>
@@ -346,13 +405,46 @@
     <div class="history-grid" id="historyGrid"></div>
   </div>
 
-  <!-- 푸터 저작권 표기 -->
   <div class="footer">
     © 2026 NOIR STUDIO. All Rights Reserved. Powered by Fal.ai AI Engine.
   </div>
 </div>
 
-<!-- 캔버스 (워터마크 합성용 비가시 요소) -->
+<!-- 💳 크레딧 및 유료 요금제 모달 팝업 -->
+<div class="modal-backdrop" id="pricingModal">
+  <div class="modal-card">
+    <button class="close-btn" onclick="closeModal()">&times;</button>
+    <h2 style="text-align: center; font-size: 1.2rem;">NOIR STUDIO 멤버십 플랜</h2>
+    <p style="text-align: center; color: #71717a; font-size: 0.8rem; margin-top: 4px;">상업적 이용 및 워터마크 제거 혜택을 누려보세요.</p>
+
+    <div class="pricing-grid">
+      <div class="price-card">
+        <div class="plan-title" style="color:#aaa;">FREE</div>
+        <div class="plan-price">0원</div>
+        <div class="plan-features">
+          • 기본 150 CR 제공<br>
+          • 5초 시네마틱 모션<br>
+          • <b>NOIR STUDIO 워터마크</b><br>
+          • 비상업적 이용
+        </div>
+        <button class="pay-btn pay-btn-free" disabled>현재 이용 중</button>
+      </div>
+
+      <div class="price-card pro">
+        <div class="plan-title" style="color:#c084fc;">PRO PASS</div>
+        <div class="plan-price">월 19,900원</div>
+        <div class="plan-features">
+          • 매월 1,000 CR 제공<br>
+          • <b>워터마크 완전 제거</b><br>
+          • 초고화질 4K 업스케일<br>
+          • <b>상업적 라이선스 제공</b>
+        </div>
+        <button class="pay-btn pay-btn-pro" onclick="simulateUpgrade()">PRO 업그레이드</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <canvas id="watermarkCanvas" style="display: none;"></canvas>
 
 <script>
@@ -360,7 +452,7 @@
   let currentImageUrl = '';
   let currentDownloadUrl = '';
   let currentFileType = 'png';
-  let isProUser = false; // 💡 추후 유료 결제 시 true로 변경되는 변수!
+  let isProUser = false;
   let historyList = JSON.parse(localStorage.getItem('noir_history') || '[]');
 
   const randomPrompts = [
@@ -371,6 +463,19 @@
   ];
 
   window.onload = () => { renderHistory(); };
+
+  function openModal() { document.getElementById('pricingModal').style.display = 'flex'; }
+  function closeModal() { document.getElementById('pricingModal').style.display = 'none'; }
+
+  function simulateUpgrade() {
+    isProUser = true;
+    document.getElementById('planBadge').innerText = "PRO PLAN (워터마크 없음)";
+    document.getElementById('planBadge').style.background = "rgba(16, 185, 129, 0.2)";
+    document.getElementById('planBadge').style.borderColor = "#10b981";
+    document.getElementById('planBadge').style.color = "#a7f3d0";
+    alert("🎉 PRO 플랜 승격이 테스트 적용되었습니다!\n이제 생성 및 다운로드 시 워터마크가 제거됩니다.");
+    closeModal();
+  }
 
   function addStyle(styleText) {
     const promptInput = document.getElementById('prompt');
@@ -397,7 +502,6 @@
            null;
   }
 
-  // 1. 이미지 생성
   async function generateDemoImage() {
     const promptInput = document.getElementById('prompt').value.trim();
     const status = document.getElementById('statusText');
@@ -451,7 +555,6 @@
     }
   }
 
-  // 2. 비디오 변환
   async function generateDemoVideo() {
     const promptInput = document.getElementById('prompt').value.trim();
     const status = document.getElementById('statusText');
@@ -535,7 +638,6 @@
     }
   }
 
-  // 📥 워터마크가 합성된 이미지 다운로드 함수
   async function downloadResultFile() {
     if (!currentDownloadUrl) {
       alert('다운로드할 결과물이 없습니다.');
@@ -545,7 +647,6 @@
     const status = document.getElementById('statusText');
     status.innerText = '💾 파일 처리 및 다운로드 중...';
 
-    // 이미지는 Canvas 이용해 워터마크를 이미지 자체에 인쇄하여 다운로드
     if (currentFileType === 'png' && !isProUser) {
       const img = new Image();
       img.crossOrigin = 'anonymous';
@@ -555,10 +656,8 @@
         canvas.width = img.width;
         canvas.height = img.height;
 
-        // 원본 이미지 그리기
         ctx.drawImage(img, 0, 0);
 
-        // 워터마크 텍스트 그리기
         const fontSize = Math.max(24, Math.floor(canvas.width * 0.03));
         ctx.font = `bold ${fontSize}px sans-serif`;
         ctx.fillStyle = 'rgba(255, 255, 255, 0.75)';
@@ -568,7 +667,6 @@
         
         ctx.fillText('NOIR STUDIO', canvas.width - (fontSize), canvas.height - (fontSize));
 
-        // 다운로드 실행
         const a = document.createElement('a');
         a.href = canvas.toDataURL('image/png');
         a.download = `noir-studio-watermarked-${Date.now()}.png`;
@@ -577,7 +675,6 @@
       };
       img.src = currentDownloadUrl;
     } else {
-      // 비디오이거나 유료 사용자인 경우 직접 다운로드
       try {
         const response = await fetch(currentDownloadUrl);
         const blob = await response.blob();
@@ -599,7 +696,6 @@
     }
   }
 
-  // 히스토리 관리
   function saveToHistory(type, url, prompt) {
     historyList.unshift({ type, url, prompt, id: Date.now() });
     if (historyList.length > 12) historyList.pop();
