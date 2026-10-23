@@ -37,19 +37,32 @@
       display: flex;
       justify-content: space-between;
       align-items: center;
-      padding: 20px 30px;
+      padding: 16px 24px;
       border-bottom: 1px solid #1f1f2e;
-      background: rgba(11, 11, 14, 0.8);
+      background: rgba(11, 11, 14, 0.85);
       position: sticky;
       top: 0;
       z-index: 100;
       backdrop-filter: blur(10px);
+    }
+    .logo-area {
+      display: flex;
+      align-items: center;
+      gap: 12px;
     }
     .logo {
       font-size: 1.25rem;
       font-weight: 800;
       letter-spacing: 2px;
       color: #fff;
+    }
+    .credit-badge {
+      font-size: 0.8rem;
+      background: #1a1a24;
+      border: 1px solid #2d2d3d;
+      padding: 4px 10px;
+      border-radius: 20px;
+      color: #a1a1aa;
     }
     .pro-btn {
       background: linear-gradient(135deg, #FFD700, #FFA500);
@@ -68,11 +81,11 @@
       max-width: 800px;
       width: 100%;
       margin: 0 auto;
-      padding: 30px 20px;
+      padding: 24px 20px;
       flex: 1;
       display: flex;
       flex-direction: column;
-      gap: 24px;
+      gap: 20px;
     }
     .input-group {
       display: flex;
@@ -99,6 +112,25 @@
     }
     textarea:focus {
       border-color: #6366f1;
+    }
+    .style-tags {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    .style-chip {
+      background: #181820;
+      border: 1px solid #27273a;
+      color: #a1a1aa;
+      padding: 6px 12px;
+      font-size: 0.8rem;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .style-chip:hover {
+      border-color: #6366f1;
+      color: #fff;
     }
     .btn-row {
       display: flex;
@@ -130,7 +162,7 @@
     }
     .result-area {
       width: 100%;
-      min-height: 300px;
+      min-height: 350px;
       border: 2px dashed #2d2d3d;
       border-radius: 16px;
       display: flex;
@@ -145,7 +177,10 @@
 <body>
 
   <header>
-    <div class="logo">NOIR STUDIO</div>
+    <div class="logo-area">
+      <div class="logo">NOIR STUDIO</div>
+      <div class="credit-badge" id="creditCount">잔여 크레딧: 50</div>
+    </div>
     <button class="pro-btn" onclick="simulateUpgrade()">✨ PRO UPGRADE</button>
   </header>
 
@@ -154,13 +189,20 @@
       <label for="prompt">Cinematic Prompt</label>
       <textarea id="prompt" placeholder="어떤 시네마틱 장면을 만들고 싶으신가요? (예: A detective in a rainy neo-noir city...)"></textarea>
       
-      <div class="btn-row">
+      <div class="style-tags">
+        <span class="style-chip" onclick="addStyle('Neo-Noir')">+ Neo-Noir</span>
+        <span class="style-chip" onclick="addStyle('Cyberpunk')">+ Cyberpunk</span>
+        <span class="style-chip" onclick="addStyle('Vintage Film')">+ Vintage Film</span>
+        <span class="style-chip" onclick="addStyle('Dramatic Lighting')">+ Dramatic Lighting</span>
+      </div>
+
+      <div class="btn-row" style="margin-top: 8px;">
         <button class="action-btn btn-secondary" onclick="applyRandomPrompt()">🎲 무작위 추천</button>
         <button class="action-btn btn-secondary" onclick="clearHistory()">🗑️ 초기화</button>
       </div>
     </div>
 
-    <button class="action-btn btn-primary" style="padding: 16px;" onclick="generateDemoImage()">✨ 이미지 생성하기</button>
+    <button class="action-btn btn-primary" style="padding: 16px; font-size: 1rem;" onclick="generateDemoImage()">✨ 이미지 생성하기 (-1 크레딧)</button>
 
     <div class="input-group">
       <label>Result</label>
@@ -173,9 +215,10 @@
   <script>
     // 1. 상태 및 관리자 키 설정
     let isPro = false;
+    let credits = 50;
     const ADMIN_SECRET_KEY = "noir2026";
 
-    // 2. PRO 업그레이드 (관리자 우회 및 워터마크 해제 제어)
+    // 2. PRO 업그레이드 (관리자 우회 키 및 워터마크 해제 제어)
     function simulateUpgrade() {
       const inputKey = prompt(
         "PRO 플랜은 현재 정식 오픈 준비 중입니다!\n\n" +
@@ -185,7 +228,9 @@
 
       if (inputKey.trim() === ADMIN_SECRET_KEY) {
         isPro = true;
-        alert("⚡ [관리자 인증 성공] Pro 모드가 활성화되었습니다. (워터마크 해제)");
+        credits = 9999;
+        updateCreditUI();
+        alert("⚡ [관리자 인증 성공] Pro 모드가 활성화되었습니다. (워터마크 해제 & 무제한 크레딧)");
         
         const proBtn = document.querySelector(".pro-btn");
         if (proBtn) proBtn.innerText = "👑 PRO ACTIVE";
@@ -194,13 +239,44 @@
       }
     }
 
-    // 3. 이미지 생성 함수 (시네마틱 결과 출력 및 워터마크 분기)
+    // 3. 크레딧 UI 업데이트
+    function updateCreditUI() {
+      const creditEl = document.getElementById("creditCount");
+      if (creditEl) {
+        creditEl.innerText = isPro ? "잔여 크레딧: 무제한 (PRO)" : `잔여 크레딧: ${credits}`;
+      }
+    }
+
+    // 4. 스타일 태그 추가 기능
+    function addStyle(styleName) {
+      const inputEl = document.getElementById("prompt");
+      if (inputEl) {
+        if (inputEl.value.trim() === "") {
+          inputEl.value = `${styleName} style`;
+        } else {
+          inputEl.value += `, ${styleName} style`;
+        }
+      }
+    }
+
+    // 5. 이미지 생성 함수
     function generateDemoImage() {
+      if (credits <= 0 && !isPro) {
+        alert("크레딧이 부족합니다! PRO 업그레이드를 이용해 주세요.");
+        return;
+      }
+
       const promptInput = document.getElementById("prompt");
       const promptText = promptInput && promptInput.value.trim() !== "" ? promptInput.value : "Cinematic noir scene, 8k";
       
       let resultContainer = document.getElementById("result");
       if (!resultContainer) return;
+
+      // 크레딧 차감
+      if (!isPro) {
+        credits--;
+        updateCreditUI();
+      }
 
       // 로딩 상태 표시
       resultContainer.innerHTML = `
@@ -210,7 +286,7 @@
         </div>
       `;
 
-      // 1.5초 후 결과 렌더링
+      // 결과 렌더링
       setTimeout(() => {
         const imageUrl = "https://images.unsplash.com/photo-1518709268805-4e9042af9f23?auto=format&fit=crop&w=1000&q=80";
         
@@ -221,7 +297,7 @@
             ${!isPro ? `
               <!-- 무료 버전 중앙 대각선 반투명 워터마크 -->
               <div style="position:absolute; top:0; left:0; width:100%; height:100%; display:flex; align-items:center; justify-content:center; pointer-events:none;">
-                <div style="transform: rotate(-30deg); border: 2px dashed rgba(255,255,255,0.4); padding: 12px 24px; background: rgba(0,0,0,0.3);">
+                <div style="transform: rotate(-30deg); border: 2px dashed rgba(255,255,255,0.4); padding: 12px 24px; background: rgba(0,0,0,0.35);">
                   <span style="font-size: clamp(16px, 4vw, 24px); font-weight: bold; color: rgba(255,255,255,0.5); letter-spacing: 2px; text-shadow: 1px 1px 3px rgba(0,0,0,0.9);">NOIR STUDIO - FREE</span>
                 </div>
               </div>
@@ -236,7 +312,7 @@
       }, 1500);
     }
 
-    // 4. 무작위 프롬프트 추천 기능
+    // 6. 무작위 프롬프트 추천
     function applyRandomPrompt() {
       const prompts = [
         "A detective standing in a rainy neo-noir city at night, glowing neon signs, dramatic rim lighting, cinematic 8k",
@@ -250,7 +326,7 @@
       }
     }
 
-    // 5. 초기화 및 모달 유틸리티 함수들
+    // 7. 초기화 및 모달 유틸리티
     function clearHistory() {
       const inputEl = document.getElementById("prompt");
       if (inputEl) inputEl.value = "";
