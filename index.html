@@ -460,10 +460,22 @@
 <canvas id="watermarkCanvas" style="display: none;"></canvas>
 
 <script>
-  // ... 기존 다른 변수 및 코드들 ...
+  // 1. 변수 선언
+  let isPro = false;
+  const ADMIN_SECRET_KEY = "noir2026"; // 사용하실 비밀키
 
-  const ADMIN_SECRET_KEY = "noir2026"; // 비밀키 선언
+  // 2. 모달 열기/닫기 함수 (기존에 오류 났던 부분)
+  function openModal(modalId) {
+    const modal = document.getElementById(modalId);
+    if (modal) modal.style.display = 'flex';
+  }
 
+  function closeModal(modalId) {
+    const modal = document.getElementById(modalId);
+    if (modal) modal.style.display = 'none';
+  }
+
+  // 3. PRO 업그레이드 처리 함수
   function simulateUpgrade() {
     const inputKey = prompt(
       "PRO 플랜은 현재 정식 오픈 준비 중입니다!\n\n" +
@@ -478,6 +490,11 @@
     } else {
       alert("📢 PRO 플랜 정식 결제 시스템은 곧 오픈될 예정입니다. 조금만 기다려 주세요!");
     }
+  }
+
+  // 4. 데모 이미지 생성 함수 (기존 함수가 끊겼던 부분)
+  function generateDemoImage() {
+    // 기존에 작성해두신 이미지 생성 로직 코드...
   }
 </script>
 
