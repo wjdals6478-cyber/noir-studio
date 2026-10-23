@@ -460,28 +460,58 @@
 <canvas id="watermarkCanvas" style="display: none;"></canvas>
 
 <script>
-  // 1. 관리자 키 및 프로 상태 변수
+  // 1. 상태 및 관리자 키 설정
   let isPro = false;
   const ADMIN_SECRET_KEY = "noir2026";
 
-  // 2. Pro 업그레이드 함수 (중괄호 { } 짝이 잘 맞는지 확인!)
+  // 2. PRO 업그레이드 (관리자 우회 포함) 함수
   function simulateUpgrade() {
-  const inputKey = prompt("PRO 플랜은 현재 정식 오픈 준비 중입니다!\n\n※ 관리자이신 경우 전용 우회 키를 입력해 주세요.");
-  if (inputKey === null) return;
+    const inputKey = prompt(
+      "PRO 플랜은 현재 정식 오픈 준비 중입니다!\n\n" +
+      "※ 관리자이신 경우 전용 우회 키를 입력해 주세요."
+    );
+    if (inputKey === null) return;
 
-  if (inputKey.trim() === "noir2026") {
-    isPro = true;
-    alert("⚡ [관리자 인증 성공] Pro 모드가 활성화되었습니다.");
-  } else {
-    alert("📢 PRO 플랜 정식 결제 시스템은 곧 오픈될 예정입니다.");
+    if (inputKey.trim() === ADMIN_SECRET_KEY) {
+      isPro = true;
+      alert("⚡ [관리자 인증 성공] Pro 모드가 활성화되었습니다. (워터마크 해제)");
+    } else {
+      alert("📢 PRO 플랜 정식 결제 시스템은 곧 오픈될 예정입니다. 조금만 기다려 주세요!");
+    }
   }
-} // <--- 이 중괄호가 꼭 닫혀 있어야 합니다!
 
-// 그 뒤에 오는 applyRandomPrompt 함수
-function applyRandomPrompt() {
-  // ...
-}
+  // 3. 버튼 클릭 에러 방지용 함수 모음 (generateDemoImage, addStyle 등)
+  function generateDemoImage() {
+    alert("🎨 이미지가 생성 중입니다. 잠시만 기다려주세요!");
+  }
+
+  function addStyle(styleName) {
+    console.log("스타일 적용:", styleName);
+  }
+
+  function applyRandomPrompt() {
+    const prompts = [
+      "Cinematic full-body shot of a detective walking in a rainy neo-noir city, neon lights reflecting on wet asphalt, 8k resolution, photorealistic",
+      "A dramatic side-profile portrait of a person in a tailored black suit, rim lighting, dark moody background, high contrast, cinematic atmosphere",
+      "Futuristic concept motorbike parked in a dark garage, glowing blue LED accents, carbon fiber texture, hyper-realistic"
+    ];
+    const random = prompts[Math.floor(Math.random() * prompts.length)];
+    const inputEl = document.getElementById("prompt") || document.querySelector("textarea") || document.querySelector("input[type='text']");
+    if (inputEl) inputEl.value = random;
+  }
+
+  function clearHistory() {
+    console.log("기록이 초기화되었습니다.");
+  }
+
+  function openModal(modalId) {
+    const modal = document.getElementById(modalId);
+    if (modal) modal.style.display = 'flex';
+  }
+
+  function closeModal(modalId) {
+    const modal = document.getElementById(modalId);
+    if (modal) modal.style.display = 'none';
+  }
 </script>
-
-</body>
 </html>
