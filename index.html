@@ -460,38 +460,25 @@
 <canvas id="watermarkCanvas" style="display: none;"></canvas>
 
 <script>
-  // 관리자 비밀 키 (원하시는 비밀번호로 변경 가능합니다)
-const ADMIN_SECRET_KEY = "noir2026"; 
+  // ... 기존 다른 변수 및 코드들 ...
 
-function drawWatermark(ctx, width, height) {
-  if (isPro) return; // Pro 사용자는 워터마크 건너뜀
+  const ADMIN_SECRET_KEY = "noir2026"; // 비밀키 선언
 
-  ctx.save();
-  
-  // 1. 투명도 및 스타일 설정 (0.15 ~ 0.25 사이가 원본을 가리지 않으면서 지우기 딱 까다롭습니다)
-  ctx.globalAlpha = 0.20; 
-  ctx.fillStyle = "#FFFFFF";
-  ctx.strokeStyle = "#000000";
-  ctx.lineWidth = 2;
-  
-  // 2. 폰트 크기 (캔버스 너비에 비례하여 자동 조절)
-  const fontSize = Math.max(24, Math.floor(width / 16));
-  ctx.font = `bold ${fontSize}px sans-serif`;
-  ctx.textAlign = "center";
-  ctx.textBaseline = "middle";
+  function simulateUpgrade() {
+    const inputKey = prompt(
+      "PRO 플랜은 현재 정식 오픈 준비 중입니다!\n\n" +
+      "※ 관리자이신 경우 전용 우회 키를 입력해 주세요."
+    );
 
-  // 3. 캔버스 중앙으로 이동 후 대각선 회전 (-30도)
-  ctx.translate(width / 2, height / 2);
-  ctx.rotate((-30 * Math.PI) / 180);
+    if (inputKey === null) return;
 
-  // 4. 중앙에 메인 워터마크 텍스트 그리기 (외곽선 + 채우기 조합으로 가독성 확보)
-  const watermarkText = "NOIR STUDIO - FREE VERSION";
-  ctx.strokeText(watermarkText, 0, 0);
-  ctx.fillText(watermarkText, 0, 0);
-
-  ctx.restore();
-}
-
+    if (inputKey.trim() === ADMIN_SECRET_KEY) {
+      isPro = true;
+      alert("⚡ [관리자 인증 성공] Pro 모드가 활성화되었습니다. (워터마크 해제)");
+    } else {
+      alert("📢 PRO 플랜 정식 결제 시스템은 곧 오픈될 예정입니다. 조금만 기다려 주세요!");
+    }
+  }
 </script>
 
 </body>
