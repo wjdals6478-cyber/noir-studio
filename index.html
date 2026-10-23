@@ -460,325 +460,38 @@
 <canvas id="watermarkCanvas" style="display: none;"></canvas>
 
 <script>
-  const FAL_API_KEY = "fal_sk_d5504426eefb4efda2b6ee452d15bb91:214d7ffac9a7956e3610f2e76ba5933c"; 
-  let currentImageUrl = '';
-  let currentDownloadUrl = '';
-  let currentFileType = 'png';
-  let isProUser = false;
-  let historyList = JSON.parse(localStorage.getItem('noir_history') || '[]');
+  // 관리자 비밀 키 (원하시는 비밀번호로 변경 가능합니다)
+const ADMIN_SECRET_KEY = "noir2026"; 
 
-  const randomPrompts = [
-    "A lonely astronaut standing on a glowing neon planet surface, cinematic, 8k",
-    "A majestic dragon resting inside a futuristic dark palace, volumetric light",
-    "A neon-lit rain wet alleyway in Neo Tokyo, dramatic perspective, raw photo",
-    "A sleek luxury sports car driving under night highway bridge, motion blur"
-  ];
+function drawWatermark(ctx, width, height) {
+  if (isPro) return; // Pro 사용자는 워터마크 건너뜀
 
-  window.onload = () => { renderHistory(); };
+  ctx.save();
+  
+  // 1. 투명도 및 스타일 설정 (0.15 ~ 0.25 사이가 원본을 가리지 않으면서 지우기 딱 까다롭습니다)
+  ctx.globalAlpha = 0.20; 
+  ctx.fillStyle = "#FFFFFF";
+  ctx.strokeStyle = "#000000";
+  ctx.lineWidth = 2;
+  
+  // 2. 폰트 크기 (캔버스 너비에 비례하여 자동 조절)
+  const fontSize = Math.max(24, Math.floor(width / 16));
+  ctx.font = `bold ${fontSize}px sans-serif`;
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
 
-  function openModal() { document.getElementById('pricingModal').style.display = 'flex'; }
-  function closeModal() { document.getElementById('pricingModal').style.display = 'none'; }
+  // 3. 캔버스 중앙으로 이동 후 대각선 회전 (-30도)
+  ctx.translate(width / 2, height / 2);
+  ctx.rotate((-30 * Math.PI) / 180);
 
-  function simulateUpgrade() {
-    isProUser = true;
-    document.getElementById('planBadge').innerText = "PRO PLAN (워터마크 없음)";
-    document.getElementById('planBadge').style.background = "rgba(16, 185, 129, 0.2)";
-    document.getElementById('planBadge').style.borderColor = "#10b981";
-    document.getElementById('planBadge').style.color = "#a7f3d0";
-    alert("🎉 PRO 플랜 승격이 테스트 적용되었습니다!\n이제 생성 및 다운로드 시 워터마크가 제거됩니다.");
-    closeModal();
-  }
+  // 4. 중앙에 메인 워터마크 텍스트 그리기 (외곽선 + 채우기 조합으로 가독성 확보)
+  const watermarkText = "NOIR STUDIO - FREE VERSION";
+  ctx.strokeText(watermarkText, 0, 0);
+  ctx.fillText(watermarkText, 0, 0);
 
-  function addStyle(styleText) {
-    const promptInput = document.getElementById('prompt');
-    if (!promptInput.value.includes(styleText)) {
-      promptInput.value += `, ${styleText}`;
-    }
-  }
+  ctx.restore();
+}
 
-  function applyRandomPrompt() {
-    const randomIndex = Math.floor(Math.random() * randomPrompts.length);
-    document.getElementById('prompt').value = randomPrompts[randomIndex];
-  }
-
-  function findVideoUrl(obj) {
-    if (!obj) return null;
-    return obj.video?.url || 
-           obj.output?.video?.url || 
-           obj.payload?.video?.url || 
-           obj.response?.video?.url || 
-           obj.url || 
-           obj.video_url || 
-           obj.images?.[0]?.url || 
-           obj.output?.images?.[0]?.url || 
-           null;
-  }
-
-  async function generateDemoImage() {
-    const promptInput = document.getElementById('prompt').value.trim();
-    const status = document.getElementById('statusText');
-    const preview = document.getElementById('previewBox');
-    const vidBtn = document.getElementById('vidBtn');
-    const downloadArea = document.getElementById('downloadArea');
-
-    if (!promptInput) {
-      alert('프롬프트를 입력해주세요.');
-      return;
-    }
-
-    downloadArea.style.display = 'none';
-    status.innerText = '⚡ AI가 고화질 실사 이미지를 생성하고 있습니다...';
-    preview.innerHTML = '<p style="color: #71717a;">실사 이미지 랜더링 중...</p>';
-
-    try {
-      const response = await fetch('https://fal.run/fal-ai/flux/dev', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Key ${FAL_API_KEY}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          prompt: promptInput + ", highly detailed, photorealistic, 8k resolution, raw photo",
-          image_size: "landscape_16_9"
-        })
-      });
-
-      const data = await response.json();
-      if (data.images && data.images.length > 0) {
-        currentImageUrl = data.images[0].url;
-        currentDownloadUrl = currentImageUrl;
-        currentFileType = 'png';
-
-        preview.innerHTML = `
-          <img src="${currentImageUrl}" alt="Generated Image">
-          ${!isProUser ? '<div class="watermark-overlay">NOIR STUDIO</div>' : ''}
-        `;
-        status.innerText = '✅ 극사실 이미지 생성 완료!';
-        vidBtn.disabled = false;
-        downloadArea.style.display = 'block';
-
-        saveToHistory('IMG', currentImageUrl, promptInput);
-      } else {
-        throw new Error(JSON.stringify(data));
-      }
-    } catch (err) {
-      status.innerText = '❌ 이미지 오류: ' + err.message;
-      console.error(err);
-    }
-  }
-
-  async function generateDemoVideo() {
-    const promptInput = document.getElementById('prompt').value.trim();
-    const status = document.getElementById('statusText');
-    const preview = document.getElementById('previewBox');
-    const downloadArea = document.getElementById('downloadArea');
-
-    if (!currentImageUrl) {
-      alert('먼저 이미지를 생성해 주세요.');
-      return;
-    }
-
-    downloadArea.style.display = 'none';
-    status.innerText = '🎬 시네마틱 비디오 생성 요청 중...';
-
-    try {
-      const response = await fetch('https://fal.run/fal-ai/minimax/video-01/image-to-video', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Key ${FAL_API_KEY}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          prompt: promptInput || "cinematic motion, ultra realistic",
-          image_url: currentImageUrl
-        })
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        let errorMsg = data.detail || data.error || data;
-        if (typeof errorMsg === 'object') {
-          errorMsg = JSON.stringify(errorMsg, null, 2);
-        }
-        throw new Error(errorMsg);
-      }
-
-      let videoUrl = findVideoUrl(data);
-      let reqId = data.request_id || data.requestId;
-
-      if (!videoUrl && reqId) {
-        status.innerText = '⏳ AI가 시네마틱 모션을 연산 중입니다... (약 30초~1분 소요)';
-        let isCompleted = false;
-
-        while (!isCompleted) {
-          await new Promise(resolve => setTimeout(resolve, 5000));
-
-          const checkRes = await fetch(`https://fal.run/fal-ai/minimax/video-01/requests/${reqId}`, {
-            headers: { 'Authorization': `Key ${FAL_API_KEY}` }
-          });
-          const checkData = await checkRes.json();
-
-          if (checkData.status === 'COMPLETED') {
-            videoUrl = findVideoUrl(checkData) || findVideoUrl(checkData.payload) || findVideoUrl(checkData.output);
-            isCompleted = true;
-          } else if (checkData.status === 'FAILED') {
-            throw new Error(checkData.error || '비디오 연산 작업이 실패했습니다.');
-          }
-        }
-      }
-
-      if (videoUrl) {
-        currentDownloadUrl = videoUrl;
-        currentFileType = 'mp4';
-
-        preview.innerHTML = `
-          <video src="${videoUrl}" controls autoplay loop></video>
-          ${!isProUser ? '<div class="watermark-overlay">NOIR STUDIO</div>' : ''}
-        `;
-        status.innerText = '🎉 시네마틱 비디오 변환 완료!';
-        downloadArea.style.display = 'block';
-
-        saveToHistory('VIDEO', videoUrl, promptInput);
-      } else {
-        throw new Error("서버 응답에서 비디오 URL을 찾을 수 없습니다: " + JSON.stringify(data));
-      }
-
-    } catch (err) {
-      status.innerText = '❌ 비디오 오류: ' + err.message;
-      console.error("비디오 에러 상세:", err);
-    }
-  }
-
-  async function downloadResultFile() {
-    if (!currentDownloadUrl) {
-      alert('다운로드할 결과물이 없습니다.');
-      return;
-    }
-
-    const status = document.getElementById('statusText');
-    status.innerText = '💾 파일 처리 및 다운로드 중...';
-
-    if (currentFileType === 'png' && !isProUser) {
-      const img = new Image();
-      img.crossOrigin = 'anonymous';
-      img.onload = () => {
-        const canvas = document.getElementById('watermarkCanvas');
-        const ctx = canvas.getContext('2d');
-        canvas.width = img.width;
-        canvas.height = img.height;
-
-        ctx.drawImage(img, 0, 0);
-
-        const fontSize = Math.max(24, Math.floor(canvas.width * 0.03));
-        ctx.font = `bold ${fontSize}px sans-serif`;
-        ctx.fillStyle = 'rgba(255, 255, 255, 0.75)';
-        ctx.textAlign = 'right';
-        ctx.shadowColor = 'rgba(0, 0, 0, 0.8)';
-        ctx.shadowBlur = 8;
-        
-        ctx.fillText('NOIR STUDIO', canvas.width - (fontSize), canvas.height - (fontSize));
-
-        const a = document.createElement('a');
-        a.href = canvas.toDataURL('image/png');
-        a.download = `noir-studio-watermarked-${Date.now()}.png`;
-        a.click();
-        status.innerText = '✨ 워터마크가 포함된 이미지가 다운로드되었습니다!';
-      };
-      img.src = currentDownloadUrl;
-    } else {
-      try {
-        const response = await fetch(currentDownloadUrl);
-        const blob = await response.blob();
-        const blobUrl = window.URL.createObjectURL(blob);
-        
-        const a = document.createElement('a');
-        a.href = blobUrl;
-        a.download = `noir-studio-${Date.now()}.${currentFileType}`;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        window.URL.revokeObjectURL(blobUrl);
-
-        status.innerText = '✨ 다운로드가 완료되었습니다!';
-      } catch (err) {
-        window.open(currentDownloadUrl, '_blank');
-        status.innerText = '✨ 새 창에서 파일이 열렸습니다.';
-      }
-    }
-  }
-
-  function saveToHistory(type, url, prompt) {
-    historyList.unshift({ type, url, prompt, id: Date.now() });
-    if (historyList.length > 12) historyList.pop();
-    localStorage.setItem('noir_history', JSON.stringify(historyList));
-    renderHistory();
-  }
-
-  function renderHistory() {
-    const grid = document.getElementById('historyGrid');
-    grid.innerHTML = '';
-
-    if (historyList.length === 0) {
-      grid.innerHTML = `<p style="grid-column: 1/-1; color: #3f3f46; font-size: 0.75rem; text-align: center; padding: 10px;">작업 기록이 없습니다.</p>`;
-      return;
-    }
-
-    historyList.forEach((item) => {
-      const el = document.createElement('div');
-      el.className = 'history-item';
-      
-      const tagText = item.type === 'IMG' ? 'IMG' : 'MOV';
-      const mediaHtml = item.type === 'IMG' 
-        ? `<img src="${item.url}" alt="history">` 
-        : `<video src="${item.url}#t=0.1" preload="metadata"></video>`;
-
-      el.innerHTML = `
-        ${mediaHtml}
-        <span class="badge-tag">${tagText}</span>
-      `;
-
-      el.onclick = () => loadHistoryItem(item);
-      grid.appendChild(el);
-    });
-  }
-
-  function loadHistoryItem(item) {
-    const preview = document.getElementById('previewBox');
-    const status = document.getElementById('statusText');
-    const downloadArea = document.getElementById('downloadArea');
-    const promptInput = document.getElementById('prompt');
-
-    promptInput.value = item.prompt;
-    currentDownloadUrl = item.url;
-
-    if (item.type === 'IMG') {
-      currentImageUrl = item.url;
-      currentFileType = 'png';
-      preview.innerHTML = `
-        <img src="${item.url}" alt="Loaded Image">
-        ${!isProUser ? '<div class="watermark-overlay">NOIR STUDIO</div>' : ''}
-      `;
-      status.innerText = '📂 선택한 이미지를 불러왔습니다.';
-      document.getElementById('vidBtn').disabled = false;
-    } else {
-      currentFileType = 'mp4';
-      preview.innerHTML = `
-        <video src="${item.url}" controls autoplay loop></video>
-        ${!isProUser ? '<div class="watermark-overlay">NOIR STUDIO</div>' : ''}
-      `;
-      status.innerText = '📂 선택한 비디오를 불러왔습니다.';
-    }
-    downloadArea.style.display = 'block';
-  }
-
-  function clearHistory() {
-    if (confirm('보관함 기록을 모두 지우시겠습니까?')) {
-      historyList = [];
-      localStorage.removeItem('noir_history');
-      renderHistory();
-    }
-  }
 </script>
 
 </body>
