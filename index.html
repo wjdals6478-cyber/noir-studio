@@ -778,6 +778,32 @@
       renderHistory();
     }
   }
+  // --- [안전 추가] 관리자 우회 비밀키 및 Pro 제어 로직 ---
+const ADMIN_SECRET_KEY = "noir2026";
+
+// 기존 함수를 덮어쓰지 않고 독립적으로 동작하는 업그레이드 함수
+function simulateUpgrade() {
+  const inputKey = prompt(
+    "PRO 플랜은 현재 정식 오픈 준비 중입니다!\n\n" +
+    "※ 관리자이신 경우 전용 우회 키를 입력해 주세요."
+  );
+
+  if (inputKey === null) return;
+
+  if (inputKey.trim() === ADMIN_SECRET_KEY) {
+    isPro = true; // Pro 상태 활성화 (워터마크 해제 연동)
+    alert("⚡ [관리자 인증 성공] Pro 모드가 활성화되었습니다. (워터마크 해제)");
+    
+    // 기존 원본에 있는 UI 업데이트 함수가 있다면 실행, 없으면 무시됨
+    if (typeof updateUI === "function") {
+      updateUI();
+    }
+  } else {
+    alert("📢 PRO 플랜 정식 결제 시스템은 곧 오픈될 예정입니다. 조금만 기다려 주세요!");
+  }
+}
+
+
 </script>
 
 </body>
