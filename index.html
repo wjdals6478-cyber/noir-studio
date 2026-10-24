@@ -722,125 +722,10 @@
   }
 
   async function generateDemoVideo() {
-    if (isGenerating) { alert('작업이 진행 중입니다.'); return; }
-
-    const cost = 50;
-    if (!isProUser) {
-      if (credits < cost) { openModal(); alert('크레딧이 부족합니다!'); return; }
-      credits -= cost;
-      activeCost = cost;
-      updateCreditDisplay();
-    } else {
-      activeCost = 0;
-    }
-
-    if (!currentImageUrl) {
-      if (activeCost > 0 && !isProUser) { credits += activeCost; updateCreditDisplay(); activeCost = 0; }
-      alert('먼저 이미지를 생성해 주세요.');
-      return;
-    }
-
-    isGenerating = true;
-    abortController = new AbortController();
-
-    const promptInput = document.getElementById('prompt').value.trim();
-    const status = document.getElementById('statusText');
-    const preview = document.getElementById('previewBox');
-    const downloadArea = document.getElementById('downloadArea');
-
-    downloadArea.style.display = 'none';
-    status.innerHTML = `🎬 비디오 변환 요청 중... <button onclick="cancelGeneration()" style="margin-left:8px; background:#ef4444; color:white; border:none; padding:2px 8px; border-radius:4px; cursor:pointer;">취소</button>`;
-
-    try {
-      const response = await fetch('/api/generate', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          endpoint: '/fal-ai/minimax/video-01/image-to-video',
-          bodyData: {
-            prompt: promptInput || "cinematic motion, ultra realistic",
-            image_url: currentImageUrl
-          }
-        }),
-        signal: abortController.signal
-      });
-
-      if (!isGenerating) return;
-      const data = await response.json();
-      if (!response.ok) throw new Error(data.detail || data.error || JSON.stringify(data));
-
-      let videoUrl = findVideoUrl(data);
-      let rawReqId = data.request_id || data.requestId || data.id;
-
-      if (!videoUrl && rawReqId) {
-        const reqId = String(rawReqId).trim();
-        status.innerHTML = `⏳ 모션 연산 중... (약 30초 소요) <button onclick="cancelGeneration()" style="margin-left:8px; background:#ef4444; color:white; border:none; padding:2px 8px; border-radius:4px; cursor:pointer;">취소</button>`;
-        let isCompleted = false;
-
-        while (!isCompleted && isGenerating) {
-          await new Promise((resolve, reject) => {
-            const timer = setTimeout(resolve, 5000);
-            abortController.signal.addEventListener('abort', () => { clearTimeout(timer); reject(new DOMException('Aborted', 'AbortError')); }, { once: true });
-          });
-          if (!isGenerating) break;
-
-          const checkRes = await fetch(`/api/generate?endpoint=${encodeURIComponent('/fal-ai/minimax/video-01/requests/' + reqId)}`, {
-            signal: abortController.signal
-          });
-          const checkData = await checkRes.json();
-
-          if (checkData.status === 'COMPLETED') {
-            videoUrl = findVideoUrl(checkData) || findVideoUrl(checkData.payload);
-            isCompleted = true;
-          } else if (checkData.status === 'FAILED') {
-            throw new Error('비디오 연산 실패');
-          }
-        }
-      }
-
-      if (!isGenerating) return;
-      if (videoUrl) {
-        isGenerating = false;
-        activeCost = 0;
-        currentDownloadUrl = videoUrl;
-        currentFileType = 'mp4';
-
-        const wmDisplay = isProUser ? 'none' : 'block';
-        preview.innerHTML = `
-          <div class="media-wrapper">
-            <video src="${videoUrl}" controls autoplay loop></video>
-            <div id="previewWatermark" class="watermark-overlay" style="display: ${wmDisplay};">NOIR STUDIO</div>
-          </div>
-        `;
-        status.innerText = '🎉 비디오 변환 완료!';
-        downloadArea.style.display = 'block';
-        saveToHistory('VIDEO', videoUrl, promptInput);
-      } else {
-        throw new Error("비디오 URL을 찾을 수 없습니다.");
-      }
-    } catch (err) {
-      if (err.name === 'AbortError') return;
-      isGenerating = false;
-      if (activeCost > 0 && !isProUser) {
-        credits += activeCost;
-        updateCreditDisplay();
-        status.innerText = `❌ 비디오 오류: ${err.message} (크레딧 환불됨)`;
-      } else {
-        status.innerText = '❌ 비디오 오류: ' + err.message;
-      }
-      activeCost = 0;
-    }
-  }
-
-  function findImageUrl(obj) {
-      if (!obj) return null;
-      return obj.images?.[0]?.url || obj.output?.images?.[0]?.url || obj.image?.url || obj.response?.images?.[0]?.url || null;
-    }
-
-    async function generateDemoImage() {
       if (isGenerating) { alert('작업이 진행 중입니다.'); return; }
+      if (!currentImageUrl) { alert('먼저 이미지를 생성한 후 비디오로 변환해 주세요!'); return; }
 
-      const cost = 10;
+      const cost = 50;
       if (!isProUser) {
         if (credits < cost) { openModal(); alert('크레딧이 부족합니다!'); return; }
         credits -= cost;
@@ -850,34 +735,27 @@
         activeCost = 0;
       }
 
-      const promptInput = document.getElementById('prompt').value.trim();
-      if (!promptInput) {
-        if (activeCost > 0 && !isProUser) { credits += activeCost; updateCreditDisplay(); activeCost = 0; }
-        alert('프롬프트를 입력해주세요.');
-        return;
-      }
-
       isGenerating = true;
       abortController = new AbortController();
 
       const status = document.getElementById('statusText');
       const preview = document.getElementById('previewBox');
-      const vidBtn = document.getElementById('vidBtn');
       const downloadArea = document.getElementById('downloadArea');
 
       downloadArea.style.display = 'none';
-      status.innerHTML = `⚡ 이미지 생성 요청 중... <button onclick="cancelGeneration()" style="margin-left:8px; background:#ef4444; color:white; border:none; padding:2px 8px; border-radius:4px; cursor:pointer;">취소</button>`;
-      preview.innerHTML = '<p style="color: #71717a;">실사 이미지 랜더링 중...</p>';
+      status.innerHTML = `🎬 비디오 변환 요청 중... (약 30~60초 소요) <button onclick="cancelGeneration()" style="margin-left:8px; background:#ef4444; color:white; border:none; padding:2px 8px; border-radius:4px; cursor:pointer;">취소</button>`;
+      preview.innerHTML = '<p style="color: #71717a;">AI 모션 비디오 랜더링 중...</p>';
 
       try {
+        // Minimax 비디오 모델 엔드포인트 호출 (fal-ai/minimax/video-01 등)
         const response = await fetch('/api/generate', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            endpoint: '/fal-ai/flux/dev',
+            endpoint: '/fal-ai/minimax/video-01',
             bodyData: {
-              prompt: promptInput + ", highly detailed, photorealistic, 8k resolution, raw photo",
-              image_size: selectedImageSize
+              prompt: document.getElementById('prompt').value.trim() || "Cinematic motion, high quality",
+              image_url: currentImageUrl
             }
           }),
           signal: abortController.signal
@@ -887,56 +765,53 @@
         const data = await response.json();
         if (!response.ok) throw new Error(data.detail || data.error || JSON.stringify(data));
 
-        let imageUrl = findImageUrl(data);
+        let videoUrl = data.video?.url || data.output?.video?.url || null;
         let rawReqId = data.request_id || data.requestId || data.id;
 
-        if (!imageUrl && rawReqId) {
+        if (!videoUrl && rawReqId) {
           const reqId = String(rawReqId).trim();
-          status.innerHTML = `⏳ 이미지 렌더링 대기 중... (약 5~10초 소요) <button onclick="cancelGeneration()" style="margin-left:8px; background:#ef4444; color:white; border:none; padding:2px 8px; border-radius:4px; cursor:pointer;">취소</button>`;
           let isCompleted = false;
 
           while (!isCompleted && isGenerating) {
             await new Promise((resolve, reject) => {
-              const timer = setTimeout(resolve, 3000);
+              const timer = setTimeout(resolve, 5000); // 비디오는 5초마다 체크
               abortController.signal.addEventListener('abort', () => { clearTimeout(timer); reject(new DOMException('Aborted', 'AbortError')); }, { once: true });
             });
             if (!isGenerating) break;
 
-            const checkRes = await fetch(`/api/generate?endpoint=${encodeURIComponent('/fal-ai/flux/dev/requests/' + reqId)}`, {
+            const checkRes = await fetch(`/api/generate?endpoint=${encodeURIComponent('/fal-ai/minimax/video-01/requests/' + reqId)}`, {
               signal: abortController.signal
             });
             const checkData = await checkRes.json();
 
             if (checkData.status === 'COMPLETED') {
-              imageUrl = findImageUrl(checkData) || findImageUrl(checkData.payload) || findImageUrl(checkData.response);
+              videoUrl = checkData.video?.url || checkData.output?.video?.url || checkData.response?.video?.url;
               isCompleted = true;
             } else if (checkData.status === 'FAILED') {
-              throw new Error('이미지 연산 실패');
+              throw new Error('비디오 연산 실패');
             }
           }
         }
 
         if (!isGenerating) return;
-        if (imageUrl) {
+        if (videoUrl) {
           isGenerating = false;
           activeCost = 0;
-          currentImageUrl = imageUrl;
-          currentDownloadUrl = currentImageUrl;
-          currentFileType = 'png';
+          currentDownloadUrl = videoUrl;
+          currentFileType = 'mp4';
 
           const wmDisplay = isProUser ? 'none' : 'block';
           preview.innerHTML = `
             <div class="media-wrapper">
-              <img src="${currentImageUrl}" alt="Generated Image">
+              <video src="${videoUrl}" autoplay loop muted controls style="width:100%; height:100%; object-fit:contain;"></video>
               <div id="previewWatermark" class="watermark-overlay" style="display: ${wmDisplay};">NOIR STUDIO</div>
             </div>
           `;
-          status.innerText = '✅ 이미지 생성 완료!';
-          vidBtn.disabled = false;
+          status.innerText = '✅ 비디오 변환 완료!';
           downloadArea.style.display = 'block';
-          saveToHistory('IMG', currentImageUrl, promptInput);
+          saveToHistory('VIDEO', videoUrl, document.getElementById('prompt').value.trim());
         } else {
-          throw new Error("이미지 데이터가 없습니다.");
+          throw new Error("비디오 데이터가 없습니다.");
         }
       } catch (err) {
         if (err.name === 'AbortError') return;
@@ -952,86 +827,7 @@
       }
     }
 
-function saveToHistory(type, url, prompt) {
-      try {
-        let history = JSON.parse(localStorage.getItem('noir_history') || '[]');
-        history.unshift({ type, url, prompt, time: new Date().toLocaleTimeString() });
-        // 최대 20개까지만 보관
-        if (history.length > 20) history.pop();
-        localStorage.setItem('noir_history', JSON.stringify(history));
-        
-        // 화면에 보관함 리스트를 갱신하는 함수가 있다면 호출
-        if (typeof renderHistory === 'function') {
-          renderHistory();
-        }
-      } catch (e) {
-        console.error('History save error:', e);
-      }
-    }
 
-// 1. 보관함에 저장하고 화면에 렌더링하는 함수
-    function saveToHistory(type, url, prompt) {
-      try {
-        let history = JSON.parse(localStorage.getItem('noir_history') || '[]');
-        history.unshift({ type, url, prompt, time: new Date().toLocaleTimeString() });
-        if (history.length > 20) history.pop();
-        localStorage.setItem('noir_history', JSON.stringify(history));
-        
-        renderHistory();
-      } catch (e) {
-        console.error('History save error:', e);
-      }
-    }
-
-    // 2. 보관함 목록을 화면(WORK HISTORY)에 그려주는 함수
-    function renderHistory() {
-      const historyContainer = document.getElementById('workHistoryList') || document.querySelector('.history-grid');
-      if (!historyContainer) return;
-
-      const history = JSON.parse(localStorage.getItem('noir_history') || '[]');
-      
-      if (history.length === 0) {
-        historyContainer.innerHTML = '<p style="color: #71717a; font-size: 13px;">아직 생성된 작업물이 없습니다.</p>';
-        return;
-      }
-
-      historyContainer.innerHTML = history.map((item, index) => `
-        <div class="history-item" style="position: relative; cursor: pointer; border-radius: 8px; overflow: hidden; background: #18181b;" onclick="loadHistoryItem(${index})">
-          <img src="${item.url}" alt="history" style="width: 100%; height: 80px; object-fit: cover;">
-          <span style="position: absolute; bottom: 4px; left: 4px; background: rgba(0,0,0,0.7); color: white; font-size: 10px; padding: 1px 4px; border-radius: 3px;">${item.type}</span>
-        </div>
-      `).join('');
-    }
-
-    // 보관함 아이템 클릭 시 다시 불러오기
-    function loadHistoryItem(index) {
-      const history = JSON.parse(localStorage.getItem('noir_history') || '[]');
-      const item = history[index];
-      if (!item) return;
-
-      currentImageUrl = item.url;
-      currentDownloadUrl = item.url;
-      const preview = document.getElementById('previewBox');
-      preview.innerHTML = `
-        <div class="media-wrapper">
-          <img src="${item.url}" alt="Generated Media">
-        </div>
-      `;
-      document.getElementById('downloadArea').style.display = 'block';
-    }
-
-    // 3. 공유하기(클립보드 링크 복사) 함수
-    function shareResult() {
-      if (!currentImageUrl) {
-        alert('공유할 결과물이 없습니다.');
-        return;
-      }
-      navigator.clipboard.writeText(currentImageUrl).then(() => {
-        alert('결과물 링크가 클립보드에 복사되었습니다! 원하시는 곳에 붙여넣으세요.');
-      }).catch(err => {
-        alert('링크 복사에 실패했습니다: ' + err);
-      });
-    }
 
     // 페이지가 처음 열릴 때 보관함 불러오기 실행
     window.addEventListener('DOMContentLoaded', () => {
