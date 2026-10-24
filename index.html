@@ -387,7 +387,7 @@
     <p>PHOTOREALISTIC AI & MOTION GENERATOR</p>
     <div class="header-badges">
       <div class="credit-badge" onclick="openModal()">⚡ 잔여 크레딧: <span id="creditSpan">150</span> CR</div>
-      <div class="plan-badge" id="planBadge" onclick="openModal()">FREE PLAN</div>
+      <div class="plan-badge" id="planBadge" onclick="handlePlanBadgeClick()">FREE PLAN</div>
     </div>
   </div>
 
@@ -483,7 +483,7 @@
     <h2 style="text-align: center; font-size: 1.2rem;">NOIR STUDIO 멤버십 플랜</h2>
     <p style="text-align: center; color: #71717a; font-size: 0.8rem; margin-top: 4px;">상업적 이용 및 워터마크 제거 혜택을 누려보세요.</p>
     <div style="margin-top: 20px;">
-      <button class="btn btn-secondary" onclick="simulateUpgrade()" style="width:100%;">⚡ 관리자 우회 모드 활성화 (noir2026)</button>
+      <button class="btn btn-secondary" onclick="alert('준비 중입니다. 프로 플랜 결제 기능은 오픈 예정입니다.'); closeModal();" style="width:100%;">⚡ Pro 플랜 업그레이드 (결제 기능 준비 중)</button>
     </div>
   </div>
 </div>
@@ -505,6 +505,26 @@
   let abortController = null;
 
   const ADMIN_SECRET_KEY = "noir2026";
+
+  // Free Plan 5연타 감지용 변수
+  let planClickCount = 0;
+  let planClickTimer = null;
+
+  function handlePlanBadgeClick() {
+    planClickCount++;
+    if (planClickTimer) clearTimeout(planClickTimer);
+
+    if (planClickCount >= 5) {
+      planClickCount = 0;
+      simulateUpgrade();
+      return;
+    }
+
+    planClickTimer = setTimeout(() => {
+      planClickCount = 0;
+      openModal();
+    }, 400);
+  }
 
   const randomPrompts = [
     "A lonely astronaut standing on a glowing neon planet surface, cinematic, 8k",
@@ -596,11 +616,6 @@
   function applyRandomPrompt() {
     const randomIndex = Math.floor(Math.random() * randomPrompts.length);
     document.getElementById('prompt').value = randomPrompts[randomIndex];
-  }
-
-  function findVideoUrl(obj) {
-    if (!obj) return null;
-    return obj.video?.url || obj.output?.video?.url || obj.payload?.video?.url || obj.response?.video?.url || obj.url || obj.video_url || obj.images?.[0]?.url || obj.output?.images?.[0]?.url || null;
   }
 
   function cancelGeneration() {
@@ -747,7 +762,6 @@
       preview.innerHTML = '<p style="color: #71717a;">AI 모션 비디오 랜더링 중...</p>';
 
       try {
-        // Minimax 비디오 모델 엔드포인트 호출 (fal-ai/minimax/video-01 등)
         const response = await fetch('/api/generate', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -774,7 +788,7 @@
 
           while (!isCompleted && isGenerating) {
             await new Promise((resolve, reject) => {
-              const timer = setTimeout(resolve, 5000); // 비디오는 5초마다 체크
+              const timer = setTimeout(resolve, 5000);
               abortController.signal.addEventListener('abort', () => { clearTimeout(timer); reject(new DOMException('Aborted', 'AbortError')); }, { once: true });
             });
             if (!isGenerating) break;
@@ -827,14 +841,6 @@
       }
     }
 
-
-
-    // 페이지가 처음 열릴 때 보관함 불러오기 실행
-    window.addEventListener('DOMContentLoaded', () => {
-      renderHistory();
-    });
-
-// 1. 보관함에 안전하게 저장하고 화면을 갱신하는 함수
     function saveToHistory(type, url, promptText) {
       try {
         let history = JSON.parse(localStorage.getItem('noir_history') || '[]');
@@ -848,17 +854,13 @@
       }
     }
 
-    // 2. 보관함 목록을 화면(WORK HISTORY)에 그려주는 함수 (모든 ID/클래스 대응)
     function renderHistory() {
       const historyContainer = document.getElementById('workHistoryList') 
                             || document.querySelector('.history-grid') 
                             || document.querySelector('.work-history-grid')
                             || document.querySelector('#workHistory');
       
-      if (!historyContainer) {
-        console.warn('보관함 목록을 표시할 HTML 요소를 찾지 못했습니다.');
-        return;
-      }
+      if (!historyContainer) return;
 
       const history = JSON.parse(localStorage.getItem('noir_history') || '[]');
       
@@ -875,7 +877,6 @@
       `).join('');
     }
 
-    // 3. 보관함 아이템 클릭 시 다시 불러오기
     function loadHistoryItem(index) {
       const history = JSON.parse(localStorage.getItem('noir_history') || '[]');
       const item = history[index];
@@ -895,13 +896,9 @@
       if (downloadArea) downloadArea.style.display = 'block';
     }
 
-    // 페이지가 열릴 때 보관함 불러오기 실행
     window.addEventListener('DOMContentLoaded', () => {
       renderHistory();
     });
-
-
-
 </script>
 
 </body>
