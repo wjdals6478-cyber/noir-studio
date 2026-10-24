@@ -47,7 +47,7 @@
       overflow-x: hidden;
     }
 
-    /* 좌우 사이드 쇼케이스 영역 (대형 화면 전용) */
+    /* 좌우 사이드 쇼케이스 영역 (대형 화면 전용 - 가로 280px 확대 버전) */
     .side-showcase {
       display: none;
     }
@@ -55,12 +55,12 @@
       .side-showcase {
         display: flex;
         flex-direction: column;
-        gap: 16px;
-        width: 220px;
+        gap: 14px;
+        width: 280px;
         position: fixed;
         top: 24px;
         z-index: 5;
-        opacity: 0.65;
+        opacity: 0.8;
         transition: opacity 0.3s ease;
       }
       .side-showcase:hover { opacity: 1; }
@@ -68,33 +68,34 @@
       .side-right { right: 24px; }
       
       .side-title {
-        font-size: 0.75rem;
+        font-size: 0.8rem;
         font-weight: 700;
         letter-spacing: 1.5px;
         color: #a1a1aa;
         text-transform: uppercase;
-        margin-bottom: 4px;
+        margin-bottom: 2px;
         border-bottom: 1px solid var(--card-border);
-        padding-bottom: 4px;
+        padding-bottom: 6px;
       }
       .side-card {
         background: var(--card-bg);
         border: 1px solid var(--card-border);
-        border-radius: 10px;
+        border-radius: 12px;
         overflow: hidden;
-        box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+        box-shadow: 0 12px 30px rgba(0, 0, 0, 0.7);
       }
       .side-card img, .side-card video {
         width: 100%;
-        height: 150px;
+        height: 180px;
         object-fit: cover;
         display: block;
       }
       .side-card-desc {
-        padding: 8px 10px;
-        font-size: 0.7rem;
-        color: #71717a;
+        padding: 8px 12px;
+        font-size: 0.72rem;
+        color: #a1a1aa;
         background: #0a0a0f;
+        font-weight: 600;
       }
     }
 
@@ -522,29 +523,37 @@
 </head>
 <body>
 
-<!-- 좌측 사이드 예시 쇼케이스 (데스크톱 전용) -->
+<!-- 좌측 사이드 예시 쇼케이스 (확대 및 카드 3개 배치) -->
 <aside class="side-showcase side-left">
   <div class="side-title">✨ Featured Gallery</div>
   <div class="side-card">
-    <img src="https://images.unsplash.com/photo-1518709268805-4e9042af9f23?q=80&w=400&auto=format&fit=crop" alt="Noir Example 1">
+    <img src="https://images.unsplash.com/photo-1518709268805-4e9042af9f23?q=80&w=500&auto=format&fit=crop" alt="Noir Example 1">
     <div class="side-card-desc">#Neon Noir & Rain</div>
   </div>
   <div class="side-card">
-    <img src="https://images.unsplash.com/photo-1509198397868-475647b2a1e5?q=80&w=400&auto=format&fit=crop" alt="Noir Example 2">
+    <img src="https://images.unsplash.com/photo-1509198397868-475647b2a1e5?q=80&w=500&auto=format&fit=crop" alt="Noir Example 2">
     <div class="side-card-desc">#Cinematic Portrait</div>
+  </div>
+  <div class="side-card">
+    <img src="https://images.unsplash.com/photo-1579783902614-a3fb3927b675?q=80&w=500&auto=format&fit=crop" alt="Noir Example 3">
+    <div class="side-card-desc">#Dark Cyberpunk</div>
   </div>
 </aside>
 
-<!-- 우측 사이드 예시 쇼케이스 (데스크톱 전용) -->
+<!-- 우측 사이드 예시 쇼케이스 (비디오 3개 및 자동재생 적용) -->
 <aside class="side-showcase side-right">
   <div class="side-title">🎬 Motion Previews</div>
   <div class="side-card">
-    <video src="https://assets.mixkit.co/videos/preview/mixkit-futuristic-city-with-neon-lights-41712-large.mp4" autoplay loop muted playsinline></video>
+    <video class="side-video" src="https://assets.mixkit.co/videos/preview/mixkit-futuristic-city-with-neon-lights-41712-large.mp4" autoplay loop muted playsinline preload="auto"></video>
     <div class="side-card-desc">#MiniMax Cinematic</div>
   </div>
   <div class="side-card">
-    <video src="https://assets.mixkit.co/videos/preview/mixkit-night-traffic-in-a-city-41711-large.mp4" autoplay loop muted playsinline></video>
+    <video class="side-video" src="https://assets.mixkit.co/videos/preview/mixkit-night-traffic-in-a-city-41711-large.mp4" autoplay loop muted playsinline preload="auto"></video>
     <div class="side-card-desc">#Cyberpunk Alley</div>
+  </div>
+  <div class="side-card">
+    <video class="side-video" src="https://assets.mixkit.co/videos/preview/mixkit-tunnel-of-futuristic-lights-41710-large.mp4" autoplay loop muted playsinline preload="auto"></video>
+    <div class="side-card-desc">#Neon Motion</div>
   </div>
 </aside>
 
@@ -705,6 +714,11 @@
   window.onload = () => { 
     renderHistory(); 
     updateCreditDisplay();
+
+    // 우측 사이드 비디오 자동 재생 강제 트리거
+    document.querySelectorAll('.side-video').forEach(video => {
+      video.play().catch(err => console.log("Auto-play prevented:", err));
+    });
   };
 
   function updateCreditDisplay() {
