@@ -638,7 +638,7 @@
   let currentDownloadUrl = '';
   let currentFileType = 'png';
   
-  // 관리자/Pro 상태 영구 보존 (LocalStorage 연동)
+  // 새로고침해도 관리자 상태 유지
   let isProUser = localStorage.getItem('noir_admin_mode') === 'true';
   
   let credits = 150;
@@ -646,7 +646,7 @@
   let historyList = JSON.parse(localStorage.getItem('noir_history') || '[]');
 
   let isGenerating = false;
-  let activeCost = 0; // 현재 진행 중인 작업에서 차감된 크레딧 (환불용)
+  let activeCost = 0; // 환불용 크레딧 추적
   let abortController = null;
 
   const ADMIN_SECRET_KEY = "noir2026";
@@ -768,7 +768,7 @@
            null;
   }
 
-  // ⚠️ 자동 환불 및 취소 처리 함수
+  // 생성 취소 및 크레딧 자동 환불
   function cancelGeneration() {
     if (!isGenerating) return;
 
@@ -779,7 +779,6 @@
 
     isGenerating = false;
 
-    // 크레딧 자동 환불 (일반 유저인 경우에만 차감된 비용 복구)
     if (activeCost > 0 && !isProUser) {
       credits += activeCost;
       updateCreditDisplay();
@@ -853,12 +852,11 @@
       activeCost = cost;
       updateCreditDisplay();
     } else {
-      activeCost = 0; // 관리자는 크레딧 소모 없음
+      activeCost = 0;
     }
 
     const promptInput = document.getElementById('prompt').value.trim();
     if (!promptInput) {
-      // 프롬프트가 없을 때 차감된 크레딧 즉시 복구 후 리턴
       if (activeCost > 0 && !isProUser) {
         credits += activeCost;
         updateCreditDisplay();
@@ -903,7 +901,7 @@
 
       if (data.images && data.images.length > 0) {
         isGenerating = false;
-        activeCost = 0; // 성공 시 환불 대상 아님
+        activeCost = 0;
         currentImageUrl = data.images[0].url;
         currentDownloadUrl = currentImageUrl;
         currentFileType = 'png';
@@ -927,7 +925,6 @@
     } catch (err) {
       if (err.name === 'AbortError') return;
       
-      // ⚠️ API 에러 발생 시 자동 환불 시스템 가동
       isGenerating = false;
       if (activeCost > 0 && !isProUser) {
         credits += activeCost;
@@ -958,7 +955,7 @@
       activeCost = cost;
       updateCreditDisplay();
     } else {
-      activeCost = 0; // 관리자는 크레딧 소모 없음
+      activeCost = 0;
     }
 
     if (!currentImageUrl) {
@@ -1046,7 +1043,7 @@
 
       if (videoUrl) {
         isGenerating = false;
-        activeCost = 0; // 성공 시 환불 대상 아님
+        activeCost = 0;
         currentDownloadUrl = videoUrl;
         currentFileType = 'mp4';
 
@@ -1069,7 +1066,6 @@
     } catch (err) {
       if (err.name === 'AbortError') return;
       
-      // ⚠️ 비디오 생성 실패 시 자동 환불 시스템 가동
       isGenerating = false;
       if (activeCost > 0 && !isProUser) {
         credits += activeCost;
