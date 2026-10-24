@@ -325,7 +325,6 @@
       overflow: hidden;
     }
 
-    /* 이미지/비디오와 워터마크를 정확히 일치시키는 전용 래퍼 */
     .media-wrapper {
       position: relative;
       display: inline-block;
@@ -512,7 +511,7 @@
   </div>
 
   <div class="panel-left">
-    <!-- 프롬프트 입력창 -->
+    <!-- 1. 프롬프트 입력창 -->
     <div class="form-group">
       <div class="label-row">
         <label for="prompt">Prompt (프롬프트)</label>
@@ -521,19 +520,27 @@
       <input type="text" id="prompt" value="A cyberpunk girl, 8k resolution, photorealistic raw photo">
     </div>
 
-    <!-- 처음 써보기 (한국어 예시) 칩: 프롬프트 입력창 아래로 이동 완료 -->
+    <!-- 2. 처음 써보기 (한국어 예시) 칩 -->
     <div class="form-group">
       <div class="label-row">
         <label>처음 써보기 (한국어 예시)</label>
       </div>
       <div class="starter-chips">
-        <span class="chip" onclick="setStarterPrompt('네온 사인이 비치는 비 내리는 사이버펑크 서울 거리')">🏙️ 사이버펑크 서울</span>
-        <span class="chip" onclick="setStarterPrompt('다크 미니멀리즘 스튜디오의 럭셔리 패션 모델')">👗 럭셔리 패션 모델</span>
-        <span class="chip" onclick="setStarterPrompt('우주 공간에서 빛나는 황금빛 은하수, 시네마틱')">🌌 황금빛 은하수</span>
+        <span class="chip" onclick="setStarterPrompt('A neon-lit rain wet street in cyberpunk Seoul, dramatic lighting, photorealistic')">🏙️ 사이버펑크 서울</span>
+        <span class="chip" onclick="setStarterPrompt('A high fashion luxury model in dark minimalist studio, cinematic portrait')">👗 럭셔리 패션 모델</span>
+        <span class="chip" onclick="setStarterPrompt('A glowing golden Milky Way in deep space, cinematic universe, highly detailed')">🌌 황금빛 은하수</span>
       </div>
     </div>
 
-    <!-- 용도별 화면 비율 선택 -->
+    <!-- 3. 스타일 추가 태그 버튼 (프롬프트 영역 아래로 이동 완료) -->
+    <div class="preset-tags">
+      <span class="tag" onclick="addStyle('Cyberpunk neon lighting, futuristic city')">+ Cyberpunk</span>
+      <span class="tag" onclick="addStyle('Cinematic dramatic atmosphere, 35mm film')">+ Cinematic</span>
+      <span class="tag" onclick="addStyle('Vintage noir atmosphere, deep shadow')">+ Vintage Noir</span>
+      <span class="tag" onclick="addStyle('Unreal Engine 5 render, ultra high detail')">+ UE5 Render</span>
+    </div>
+
+    <!-- 4. 용도별 화면 비율 선택 -->
     <div class="form-group">
       <label>용도별 화면 비율</label>
       <div class="ratio-grid">
@@ -544,7 +551,7 @@
       </div>
     </div>
 
-    <!-- 워터마크 커스터마이징 제어판 -->
+    <!-- 5. 워터마크 커스터마이징 제어판 -->
     <div class="watermark-panel">
       <div class="wm-row">
         <span>🛡️ 워터마크 커스텀 설정</span>
@@ -569,13 +576,6 @@
         </div>
         <input type="range" id="wmOpacityRange" min="10" max="100" value="45" class="opacity-slider" oninput="updateWatermarkLive()">
       </div>
-    </div>
-
-    <div class="preset-tags">
-      <span class="tag" onclick="addStyle('Cyberpunk neon lighting, futuristic city')">+ Cyberpunk</span>
-      <span class="tag" onclick="addStyle('Cinematic dramatic atmosphere, 35mm film')">+ Cinematic</span>
-      <span class="tag" onclick="addStyle('Vintage noir atmosphere, deep shadow')">+ Vintage Noir</span>
-      <span class="tag" onclick="addStyle('Unreal Engine 5 render, ultra high detail')">+ UE5 Render</span>
     </div>
 
     <div class="action-guide" id="actionGuide">
@@ -709,8 +709,8 @@
     }
   }
 
-  function setStarterPrompt(text) {
-    document.getElementById('prompt').value = text;
+  function setStarterPrompt(englishPrompt) {
+    document.getElementById('prompt').value = englishPrompt;
   }
 
   function setRatio(ratioName, apiSize) {
