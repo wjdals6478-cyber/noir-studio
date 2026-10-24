@@ -84,7 +84,7 @@
         overflow: hidden;
         box-shadow: 0 12px 30px rgba(0, 0, 0, 0.7);
       }
-      .side-card img, .side-card video {
+      .side-card img {
         width: 100%;
         height: 180px;
         object-fit: cover;
@@ -214,14 +214,18 @@
       text-transform: uppercase;
       letter-spacing: 0.5px;
     }
-    .random-btn {
+    .btn-group-inline {
+      display: flex;
+      gap: 8px;
+    }
+    .action-text-btn {
       background: none;
       border: none;
       color: #c084fc;
       font-size: 0.75rem;
       cursor: pointer;
     }
-    .random-btn:hover { text-decoration: underline; }
+    .action-text-btn:hover { text-decoration: underline; }
 
     input[type="text"] {
       width: 100%;
@@ -523,7 +527,7 @@
 </head>
 <body>
 
-<!-- 좌측 사이드 예시 쇼케이스 (확대 및 카드 3개 배치) -->
+<!-- 좌측 사이드 예시 쇼케이스 (인물 + 느와르 분위기 이미지 3개) -->
 <aside class="side-showcase side-left">
   <div class="side-title">✨ Featured Gallery</div>
   <div class="side-card">
@@ -535,25 +539,25 @@
     <div class="side-card-desc">#Cinematic Portrait</div>
   </div>
   <div class="side-card">
-    <img src="https://images.unsplash.com/photo-1579783902614-a3fb3927b675?q=80&w=500&auto=format&fit=crop" alt="Noir Example 3">
-    <div class="side-card-desc">#Dark Cyberpunk</div>
+    <img src="https://images.unsplash.com/photo-1534447677768-be436bb09401?q=80&w=500&auto=format&fit=crop" alt="Noir Example 3">
+    <div class="side-card-desc">#Mysterious Figure</div>
   </div>
 </aside>
 
-<!-- 우측 사이드 예시 쇼케이스 (비디오 3개 및 자동재생 적용) -->
+<!-- 우측 사이드 예시 쇼케이스 (동영상 대신 100% 안정적인 배경/도시/사이버펑크 이미지 3개) -->
 <aside class="side-showcase side-right">
-  <div class="side-title">🎬 Motion Previews</div>
+  <div class="side-title">🏙️ Cinematic Scenery</div>
   <div class="side-card">
-    <video class="side-video" src="https://assets.mixkit.co/videos/preview/mixkit-futuristic-city-with-neon-lights-41712-large.mp4" autoplay loop muted playsinline preload="auto"></video>
-    <div class="side-card-desc">#MiniMax Cinematic</div>
+    <img src="https://images.unsplash.com/photo-1508739773434-c26b3d09e071?q=80&w=500&auto=format&fit=crop" alt="Scenery 1">
+    <div class="side-card-desc">#Cyberpunk City Night</div>
   </div>
   <div class="side-card">
-    <video class="side-video" src="https://assets.mixkit.co/videos/preview/mixkit-night-traffic-in-a-city-41711-large.mp4" autoplay loop muted playsinline preload="auto"></video>
-    <div class="side-card-desc">#Cyberpunk Alley</div>
+    <img src="https://images.unsplash.com/photo-1542751371-adc38448a05e?q=80&w=500&auto=format&fit=crop" alt="Scenery 2">
+    <div class="side-card-desc">#Dark Alley Atmosphere</div>
   </div>
   <div class="side-card">
-    <video class="side-video" src="https://assets.mixkit.co/videos/preview/mixkit-tunnel-of-futuristic-lights-41710-large.mp4" autoplay loop muted playsinline preload="auto"></video>
-    <div class="side-card-desc">#Neon Motion</div>
+    <img src="https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?q=80&w=500&auto=format&fit=crop" alt="Scenery 3">
+    <div class="side-card-desc">#Neon Light Reflections</div>
   </div>
 </aside>
 
@@ -575,11 +579,14 @@
   </div>
 
   <div class="panel-left">
-    <!-- 1. 프롬프트 입력창 -->
+    <!-- 1. 프롬프트 입력창 (전체 지우기 버튼 추가) -->
     <div class="form-group">
       <div class="label-row">
         <label for="prompt">Prompt (프롬프트)</label>
-        <button class="random-btn" onclick="applyRandomPrompt()">🎲 무작위 추천</button>
+        <div class="btn-group-inline">
+          <button class="action-text-btn" onclick="clearPrompt()">🗑️ 전체 지우기</button>
+          <button class="action-text-btn" onclick="applyRandomPrompt()">🎲 무작위 추천</button>
+        </div>
       </div>
       <input type="text" id="prompt" value="A cyberpunk girl, 8k resolution, photorealistic raw photo">
     </div>
@@ -714,11 +721,6 @@
   window.onload = () => { 
     renderHistory(); 
     updateCreditDisplay();
-
-    // 우측 사이드 비디오 자동 재생 강제 트리거
-    document.querySelectorAll('.side-video').forEach(video => {
-      video.play().catch(err => console.log("Auto-play prevented:", err));
-    });
   };
 
   function updateCreditDisplay() {
@@ -755,6 +757,12 @@
 
   function setStarterPrompt(englishPrompt) {
     document.getElementById('prompt').value = englishPrompt;
+  }
+
+  function clearPrompt() {
+    const promptInput = document.getElementById('prompt');
+    promptInput.value = '';
+    promptInput.focus();
   }
 
   function setRatio(ratioName, apiSize) {
