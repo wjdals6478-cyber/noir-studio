@@ -637,14 +637,16 @@
   let currentImageUrl = '';
   let currentDownloadUrl = '';
   let currentFileType = 'png';
-  let isProUser = false; // 관리자 모드 여부
+  
+  // 관리자/Pro 상태 영구 보존 (LocalStorage 연동)
+  let isProUser = localStorage.getItem('noir_admin_mode') === 'true';
   
   let credits = 150;
   let selectedImageSize = 'landscape_16_9';
   let historyList = JSON.parse(localStorage.getItem('noir_history') || '[]');
 
   let isGenerating = false;
-  let currentCost = 0;
+  let activeCost = 0; // 현재 진행 중인 작업에서 차감된 크레딧 (환불용)
   let abortController = null;
 
   const ADMIN_SECRET_KEY = "noir2026";
@@ -659,7 +661,22 @@
   window.onload = () => { 
     initCreditSystem(); 
     renderHistory(); 
+    if (isProUser) {
+      applyAdminUI();
+    }
   };
+
+  function applyAdminUI() {
+    document.getElementById('planBadge').innerText = "PRO / ADMIN (무제한 사용)";
+    document.getElementById('planBadge').style.background = "rgba(16, 185, 129, 0.2)";
+    document.getElementById('planBadge').style.borderColor = "#10b981";
+    document.getElementById('planBadge').style.color = "#a7f3d0";
+
+    const dlBtn = document.getElementById('downloadBtn');
+    if (dlBtn) {
+      dlBtn.innerText = "📥 고화질 결과물 다운로드 (PRO 워터마크 해제)";
+    }
+  }
 
   function initCreditSystem() {
     const today = new Date().toDateString();
@@ -680,11 +697,8 @@
   }
 
   function updateCreditDisplay() {
-    const span = document.getElementById('creditSpan');
-    if (isProUser) {
-      span.innerText = 'UNLIMITED'; // 관리자 모드 시 무제한 표시
-    } else {
-      span.innerText = credits;
+    document.getElementById('creditSpan').innerText = isProUser ? '∞ (무제한)' : credits;
+    if (!isProUser) {
       localStorage.setItem('noir_credits', credits.toString());
     }
   }
@@ -701,26 +715,13 @@
     if (inputKey === null) return;
 
     if (inputKey.trim() === ADMIN_SECRET_KEY) {
-      isProUser = true; // 관리자 인증 완료
+      isProUser = true;
+      localStorage.setItem('noir_admin_mode', 'true');
+      applyAdminUI();
 
-      // UI 업데이트 (워터마크 제거 + 크레딧 무제한)
-      document.getElementById('planBadge').innerText = "PRO PLAN (관리자 무제한)";
-      document.getElementById('planBadge').style.background = "rgba(16, 185, 129, 0.2)";
-      document.getElementById('planBadge').style.borderColor = "#10b981";
-      document.getElementById('planBadge').style.color = "#a7f3d0";
-
-      updateCreditDisplay();
-
-      const dlBtn = document.getElementById('downloadBtn');
-      if (dlBtn) {
-        dlBtn.innerText = "📥 고화질 결과물 다운로드 (PRO 워터마크 해제)";
-      }
-
-      alert("⚡ [관리자 인증 성공]\n- 워터마크 완전 해제\n- 크레딧 무제한 사용 모드가 활성화되었습니다.");
+      alert("⚡ [관리자 인증 성공] Pro 모드 및 무제한 크레딧이 활성화되었습니다.");
       closeModal();
-      
-      const wm = document.getElementById('previewWatermark');
-      if(wm) wm.style.display = 'none';
+      updateCreditDisplay();
     } else {
       alert("📢 PRO 플랜 정식 결제 시스템은 곧 오픈될 예정입니다. 조금만 기다려 주세요!");
     }
@@ -767,6 +768,7 @@
            null;
   }
 
+  // ⚠️ 자동 환불 및 취소 처리 함수
   function cancelGeneration() {
     if (!isGenerating) return;
 
@@ -776,23 +778,29 @@
     }
 
     isGenerating = false;
-    
-    // 일반 유저인 경우에만 크레딧 환불
-    if (!isProUser) {
-      credits += currentCost;
+
+    // 크레딧 자동 환불 (일반 유저인 경우에만 차감된 비용 복구)
+    if (activeCost > 0 && !isProUser) {
+      credits += activeCost;
       updateCreditDisplay();
     }
+
+    const refundedCost = activeCost;
+    activeCost = 0;
 
     const preview = document.getElementById('previewBox');
     const status = document.getElementById('statusText');
     const downloadArea = document.getElementById('downloadArea');
 
     preview.innerHTML = '<p style="color: #3f3f46; font-size: 0.85rem;">결과물이 이 스크린에 표시됩니다.</p>';
-    status.innerText = isProUser ? '⚠️ 작업이 취소되었습니다.' : `⚠️ 생성이 취소되어 사용된 ${currentCost} 크레딧이 정상적으로 환불되었습니다.`;
+    if (isProUser) {
+      status.innerText = `⚠️ 작업이 취소되었습니다. (관리자 무제한 모드)`;
+    } else {
+      status.innerText = `⚠️ 생성이 취소되어 사용된 ${refundedCost} 크레딧(${refundedCost} CR)이 자동 환불되었습니다.`;
+    }
     downloadArea.style.display = 'none';
   }
 
-  // 🔗 공유 및 링크 복사 기능
   function copyResultLink() {
     if (!currentDownloadUrl) {
       alert('복사할 결과물 링크가 없습니다.');
@@ -830,32 +838,37 @@
 
   async function generateDemoImage() {
     if (isGenerating) {
-      alert('현재 다른 작업이 진행 중입니다.');
+      alert('현재 다른 작업이 진행 중입니다. 완료되거나 취소된 후 시도해주세요.');
       return;
     }
-
-    // 일반 유저일 때만 크레딧 검사
-    if (!isProUser && credits < 10) {
-      openModal();
-      alert('크레딧이 부족합니다! 필요: 10 CR');
-      return;
+    
+    const cost = 10;
+    if (!isProUser) {
+      if (credits < cost) {
+        openModal();
+        alert('크레딧이 부족합니다! 필요: ' + cost + ' CR');
+        return;
+      }
+      credits -= cost;
+      activeCost = cost;
+      updateCreditDisplay();
+    } else {
+      activeCost = 0; // 관리자는 크레딧 소모 없음
     }
 
     const promptInput = document.getElementById('prompt').value.trim();
     if (!promptInput) {
+      // 프롬프트가 없을 때 차감된 크레딧 즉시 복구 후 리턴
+      if (activeCost > 0 && !isProUser) {
+        credits += activeCost;
+        updateCreditDisplay();
+        activeCost = 0;
+      }
       alert('프롬프트를 입력해주세요.');
       return;
     }
 
     isGenerating = true;
-    currentCost = 10;
-
-    // 일반 유저만 크레딧 차감 (관리자는 차감 안함)
-    if (!isProUser) {
-      credits -= 10;
-      updateCreditDisplay();
-    }
-
     abortController = new AbortController();
 
     const status = document.getElementById('statusText');
@@ -881,20 +894,16 @@
         signal: abortController.signal
       });
 
-      const responseText = await response.text();
-      let data;
-      try {
-        data = JSON.parse(responseText);
-      } catch (parseErr) {
-        throw new Error(`서버 응답 형식 오류 (타임아웃 또는 서버 에러): ${responseText.slice(0, 80)}`);
-      }
+      if (!isGenerating) return;
 
+      const data = await response.json();
       if (!response.ok) {
-        throw new Error(data.error || data.message || JSON.stringify(data));
+        throw new Error(data.detail || data.error || JSON.stringify(data));
       }
 
       if (data.images && data.images.length > 0) {
         isGenerating = false;
+        activeCost = 0; // 성공 시 환불 대상 아님
         currentImageUrl = data.images[0].url;
         currentDownloadUrl = currentImageUrl;
         currentFileType = 'png';
@@ -913,50 +922,56 @@
 
         saveToHistory('IMG', currentImageUrl, promptInput);
       } else {
-        throw new Error("이미지 URL을 찾을 수 없습니다: " + JSON.stringify(data));
+        throw new Error("이미지 생성 결과 데이터가 비어 있습니다.");
       }
     } catch (err) {
       if (err.name === 'AbortError') return;
-      isGenerating = false;
       
-      // 일반 유저만 에러 시 크레딧 자동 복구
-      if (!isProUser) {
-        credits += currentCost;
+      // ⚠️ API 에러 발생 시 자동 환불 시스템 가동
+      isGenerating = false;
+      if (activeCost > 0 && !isProUser) {
+        credits += activeCost;
         updateCreditDisplay();
+        status.innerText = `❌ 오류 발생: ${err.message} (사용한 ${activeCost} 크레딧이 자동 환불되었습니다.)`;
+      } else {
+        status.innerText = '❌ 이미지 오류: ' + err.message;
       }
-
-      status.innerText = '❌ 이미지 오류' + (!isProUser ? ' (크레딧 자동 환불됨)' : '') + ': ' + err.message;
+      activeCost = 0;
       console.error(err);
     }
   }
 
   async function generateDemoVideo() {
     if (isGenerating) {
-      alert('현재 다른 작업이 진행 중입니다.');
+      alert('현재 다른 작업이 진행 중입니다. 완료되거나 취소된 후 시도해주세요.');
       return;
     }
-
-    // 일반 유저일 때만 크레딧 검사
-    if (!isProUser && credits < 50) {
-      openModal();
-      alert('크레딧이 부족합니다! 필요: 50 CR');
-      return;
+    
+    const cost = 50;
+    if (!isProUser) {
+      if (credits < cost) {
+        openModal();
+        alert('크레딧이 부족합니다! 필요: ' + cost + ' CR');
+        return;
+      }
+      credits -= cost;
+      activeCost = cost;
+      updateCreditDisplay();
+    } else {
+      activeCost = 0; // 관리자는 크레딧 소모 없음
     }
 
     if (!currentImageUrl) {
+      if (activeCost > 0 && !isProUser) {
+        credits += activeCost;
+        updateCreditDisplay();
+        activeCost = 0;
+      }
       alert('먼저 이미지를 생성해 주세요.');
       return;
     }
 
     isGenerating = true;
-    currentCost = 50;
-
-    // 일반 유저만 크레딧 차감
-    if (!isProUser) {
-      credits -= 50;
-      updateCreditDisplay();
-    }
-
     abortController = new AbortController();
 
     const promptInput = document.getElementById('prompt').value.trim();
@@ -965,7 +980,7 @@
     const downloadArea = document.getElementById('downloadArea');
 
     downloadArea.style.display = 'none';
-    status.innerHTML = `🎬 시네마틱 비디오 생성 요청 중... ${isProUser ? '' : '(-50 CR)'} <button onclick="cancelGeneration()" style="margin-left:8px; background:#ef4444; color:white; border:none; padding:2px 8px; border-radius:4px; cursor:pointer; font-size:0.75rem;">생성 취소</button>`;
+    status.innerHTML = `🎬 시네마틱 비디오 생성 요청 중... <button onclick="cancelGeneration()" style="margin-left:8px; background:#ef4444; color:white; border:none; padding:2px 8px; border-radius:4px; cursor:pointer; font-size:0.75rem;">생성 취소</button>`;
 
     try {
       const response = await fetch('/api/generate', {
@@ -981,16 +996,12 @@
         signal: abortController.signal
       });
 
-      const responseText = await response.text();
-      let data;
-      try {
-        data = JSON.parse(responseText);
-      } catch (parseErr) {
-        throw new Error(`서버 응답 형식 오류 (타임아웃 또는 서버 에러): ${responseText.slice(0, 80)}`);
-      }
+      if (!isGenerating) return;
+
+      const data = await response.json();
 
       if (!response.ok) {
-        let errorMsg = data.detail || data.error || responseText;
+        let errorMsg = data.detail || data.error || data;
         if (typeof errorMsg === 'object') errorMsg = JSON.stringify(errorMsg, null, 2);
         throw new Error(errorMsg);
       }
@@ -1020,13 +1031,7 @@
           const checkRes = await fetch(`/api/generate?endpoint=${encodeURIComponent('/fal-ai/minimax/video-01/requests/' + reqId)}`, {
             signal: abortController.signal
           });
-          const checkText = await checkRes.text();
-          let checkData;
-          try {
-            checkData = JSON.parse(checkText);
-          } catch (e) {
-            continue;
-          }
+          const checkData = await checkRes.json();
 
           if (checkData.status === 'COMPLETED') {
             videoUrl = findVideoUrl(checkData) || findVideoUrl(checkData.payload) || findVideoUrl(checkData.output);
@@ -1041,6 +1046,7 @@
 
       if (videoUrl) {
         isGenerating = false;
+        activeCost = 0; // 성공 시 환불 대상 아님
         currentDownloadUrl = videoUrl;
         currentFileType = 'mp4';
 
@@ -1062,15 +1068,17 @@
 
     } catch (err) {
       if (err.name === 'AbortError') return;
-      isGenerating = false;
       
-      // 일반 유저만 에러 시 크레딧 자동 복구
-      if (!isProUser) {
-        credits += currentCost;
+      // ⚠️ 비디오 생성 실패 시 자동 환불 시스템 가동
+      isGenerating = false;
+      if (activeCost > 0 && !isProUser) {
+        credits += activeCost;
         updateCreditDisplay();
+        status.innerText = `❌ 비디오 오류: ${err.message} (사용한 ${activeCost} 크레딧이 자동 환불되었습니다.)`;
+      } else {
+        status.innerText = '❌ 비디오 오류: ' + err.message;
       }
-
-      status.innerText = '❌ 비디오 오류' + (!isProUser ? ' (크레딧 자동 환불됨)' : '') + ': ' + err.message;
+      activeCost = 0;
       console.error("비디오 에러 상세:", err);
     }
   }
