@@ -952,6 +952,23 @@
       }
     }
 
+function saveToHistory(type, url, prompt) {
+      try {
+        let history = JSON.parse(localStorage.getItem('noir_history') || '[]');
+        history.unshift({ type, url, prompt, time: new Date().toLocaleTimeString() });
+        // 최대 20개까지만 보관
+        if (history.length > 20) history.pop();
+        localStorage.setItem('noir_history', JSON.stringify(history));
+        
+        // 화면에 보관함 리스트를 갱신하는 함수가 있다면 호출
+        if (typeof renderHistory === 'function') {
+          renderHistory();
+        }
+      } catch (e) {
+        console.error('History save error:', e);
+      }
+    }
+
 
 </script>
 
