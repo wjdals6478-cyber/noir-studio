@@ -637,7 +637,7 @@
   let currentImageUrl = '';
   let currentDownloadUrl = '';
   let currentFileType = 'png';
-  let isProUser = false;
+  let isProUser = false; // 관리자 모드 여부
   
   let credits = 150;
   let selectedImageSize = 'landscape_16_9';
@@ -680,8 +680,13 @@
   }
 
   function updateCreditDisplay() {
-    document.getElementById('creditSpan').innerText = credits;
-    localStorage.setItem('noir_credits', credits.toString());
+    const span = document.getElementById('creditSpan');
+    if (isProUser) {
+      span.innerText = 'UNLIMITED'; // 관리자 모드 시 무제한 표시
+    } else {
+      span.innerText = credits;
+      localStorage.setItem('noir_credits', credits.toString());
+    }
   }
 
   function openModal() { document.getElementById('pricingModal').style.display = 'flex'; }
@@ -696,18 +701,22 @@
     if (inputKey === null) return;
 
     if (inputKey.trim() === ADMIN_SECRET_KEY) {
-      isProUser = true;
-      document.getElementById('planBadge').innerText = "PRO PLAN (워터마크 없음)";
+      isProUser = true; // 관리자 인증 완료
+
+      // UI 업데이트 (워터마크 제거 + 크레딧 무제한)
+      document.getElementById('planBadge').innerText = "PRO PLAN (관리자 무제한)";
       document.getElementById('planBadge').style.background = "rgba(16, 185, 129, 0.2)";
       document.getElementById('planBadge').style.borderColor = "#10b981";
       document.getElementById('planBadge').style.color = "#a7f3d0";
+
+      updateCreditDisplay();
 
       const dlBtn = document.getElementById('downloadBtn');
       if (dlBtn) {
         dlBtn.innerText = "📥 고화질 결과물 다운로드 (PRO 워터마크 해제)";
       }
 
-      alert("⚡ [관리자 인증 성공] Pro 모드가 활성화되었습니다. (워터마크 완전 해제)");
+      alert("⚡ [관리자 인증 성공]\n- 워터마크 완전 해제\n- 크레딧 무제한 사용 모드가 활성화되었습니다.");
       closeModal();
       
       const wm = document.getElementById('previewWatermark');
@@ -767,15 +776,19 @@
     }
 
     isGenerating = false;
-    credits += currentCost;
-    updateCreditDisplay();
+    
+    // 일반 유저인 경우에만 크레딧 환불
+    if (!isProUser) {
+      credits += currentCost;
+      updateCreditDisplay();
+    }
 
     const preview = document.getElementById('previewBox');
     const status = document.getElementById('statusText');
     const downloadArea = document.getElementById('downloadArea');
 
     preview.innerHTML = '<p style="color: #3f3f46; font-size: 0.85rem;">결과물이 이 스크린에 표시됩니다.</p>';
-    status.innerText = `⚠️ 생성이 취소되어 사용된 ${currentCost} 크레딧(${currentCost} CR)이 환불되었습니다.`;
+    status.innerText = isProUser ? '⚠️ 작업이 취소되었습니다.' : `⚠️ 생성이 취소되어 사용된 ${currentCost} 크레딧이 정상적으로 환불되었습니다.`;
     downloadArea.style.display = 'none';
   }
 
@@ -820,7 +833,9 @@
       alert('현재 다른 작업이 진행 중입니다.');
       return;
     }
-    if (credits < 10) {
+
+    // 일반 유저일 때만 크레딧 검사
+    if (!isProUser && credits < 10) {
       openModal();
       alert('크레딧이 부족합니다! 필요: 10 CR');
       return;
@@ -834,8 +849,12 @@
 
     isGenerating = true;
     currentCost = 10;
-    credits -= 10;
-    updateCreditDisplay();
+
+    // 일반 유저만 크레딧 차감 (관리자는 차감 안함)
+    if (!isProUser) {
+      credits -= 10;
+      updateCreditDisplay();
+    }
 
     abortController = new AbortController();
 
@@ -849,7 +868,6 @@
     preview.innerHTML = '<p style="color: #71717a;">실사 이미지 랜더링 중...</p>';
 
     try {
-      // 보안 백엔드 API 프록시(`/api/generate`)로 호출
       const response = await fetch('/api/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -863,9 +881,18 @@
         signal: abortController.signal
       });
 
-      if (!isGenerating) return;
+      const responseText = await response.text();
+      let data;
+      try {
+        data = JSON.parse(responseText);
+      } catch (parseErr) {
+        throw new Error(`서버 응답 형식 오류 (타임아웃 또는 서버 에러): ${responseText.slice(0, 80)}`);
+      }
 
-      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.error || data.message || JSON.stringify(data));
+      }
+
       if (data.images && data.images.length > 0) {
         isGenerating = false;
         currentImageUrl = data.images[0].url;
@@ -880,18 +907,25 @@
             <div id="previewWatermark" class="watermark-overlay" style="display: ${wmDisplay};">NOIR STUDIO</div>
           </div>
         `;
-        status.innerText = '✅ 극사실 이미지 생성 완료! (-10 CR)';
+        status.innerText = isProUser ? '✅ 극사실 이미지 생성 완료! (관리자 무제한)' : '✅ 극사실 이미지 생성 완료! (-10 CR)';
         vidBtn.disabled = false;
         downloadArea.style.display = 'block';
 
         saveToHistory('IMG', currentImageUrl, promptInput);
       } else {
-        throw new Error(JSON.stringify(data));
+        throw new Error("이미지 URL을 찾을 수 없습니다: " + JSON.stringify(data));
       }
     } catch (err) {
       if (err.name === 'AbortError') return;
       isGenerating = false;
-      status.innerText = '❌ 이미지 오류: ' + err.message;
+      
+      // 일반 유저만 에러 시 크레딧 자동 복구
+      if (!isProUser) {
+        credits += currentCost;
+        updateCreditDisplay();
+      }
+
+      status.innerText = '❌ 이미지 오류' + (!isProUser ? ' (크레딧 자동 환불됨)' : '') + ': ' + err.message;
       console.error(err);
     }
   }
@@ -901,11 +935,14 @@
       alert('현재 다른 작업이 진행 중입니다.');
       return;
     }
-    if (credits < 50) {
+
+    // 일반 유저일 때만 크레딧 검사
+    if (!isProUser && credits < 50) {
       openModal();
       alert('크레딧이 부족합니다! 필요: 50 CR');
       return;
     }
+
     if (!currentImageUrl) {
       alert('먼저 이미지를 생성해 주세요.');
       return;
@@ -913,8 +950,12 @@
 
     isGenerating = true;
     currentCost = 50;
-    credits -= 50;
-    updateCreditDisplay();
+
+    // 일반 유저만 크레딧 차감
+    if (!isProUser) {
+      credits -= 50;
+      updateCreditDisplay();
+    }
 
     abortController = new AbortController();
 
@@ -924,7 +965,7 @@
     const downloadArea = document.getElementById('downloadArea');
 
     downloadArea.style.display = 'none';
-    status.innerHTML = `🎬 시네마틱 비디오 생성 요청 중... (-50 CR) <button onclick="cancelGeneration()" style="margin-left:8px; background:#ef4444; color:white; border:none; padding:2px 8px; border-radius:4px; cursor:pointer; font-size:0.75rem;">생성 취소</button>`;
+    status.innerHTML = `🎬 시네마틱 비디오 생성 요청 중... ${isProUser ? '' : '(-50 CR)'} <button onclick="cancelGeneration()" style="margin-left:8px; background:#ef4444; color:white; border:none; padding:2px 8px; border-radius:4px; cursor:pointer; font-size:0.75rem;">생성 취소</button>`;
 
     try {
       const response = await fetch('/api/generate', {
@@ -940,12 +981,16 @@
         signal: abortController.signal
       });
 
-      if (!isGenerating) return;
-
-      const data = await response.json();
+      const responseText = await response.text();
+      let data;
+      try {
+        data = JSON.parse(responseText);
+      } catch (parseErr) {
+        throw new Error(`서버 응답 형식 오류 (타임아웃 또는 서버 에러): ${responseText.slice(0, 80)}`);
+      }
 
       if (!response.ok) {
-        let errorMsg = data.detail || data.error || data;
+        let errorMsg = data.detail || data.error || responseText;
         if (typeof errorMsg === 'object') errorMsg = JSON.stringify(errorMsg, null, 2);
         throw new Error(errorMsg);
       }
@@ -975,7 +1020,13 @@
           const checkRes = await fetch(`/api/generate?endpoint=${encodeURIComponent('/fal-ai/minimax/video-01/requests/' + reqId)}`, {
             signal: abortController.signal
           });
-          const checkData = await checkRes.json();
+          const checkText = await checkRes.text();
+          let checkData;
+          try {
+            checkData = JSON.parse(checkText);
+          } catch (e) {
+            continue;
+          }
 
           if (checkData.status === 'COMPLETED') {
             videoUrl = findVideoUrl(checkData) || findVideoUrl(checkData.payload) || findVideoUrl(checkData.output);
@@ -1006,13 +1057,20 @@
 
         saveToHistory('VIDEO', videoUrl, promptInput);
       } else {
-        throw new Error("서버 응답에서 비디오 URL을 찾을 수 없습니다: " + JSON.stringify(data));
+        throw new Error("서버 응답에서 비디오 URL을 찾을 수 없습니다.");
       }
 
     } catch (err) {
       if (err.name === 'AbortError') return;
       isGenerating = false;
-      status.innerText = '❌ 비디오 오류: ' + err.message;
+      
+      // 일반 유저만 에러 시 크레딧 자동 복구
+      if (!isProUser) {
+        credits += currentCost;
+        updateCreditDisplay();
+      }
+
+      status.innerText = '❌ 비디오 오류' + (!isProUser ? ' (크레딧 자동 환불됨)' : '') + ': ' + err.message;
       console.error("비디오 에러 상세:", err);
     }
   }
