@@ -638,15 +638,13 @@
   let currentDownloadUrl = '';
   let currentFileType = 'png';
   
-  // 새로고침해도 관리자 상태 유지
   let isProUser = localStorage.getItem('noir_admin_mode') === 'true';
-  
   let credits = 150;
   let selectedImageSize = 'landscape_16_9';
   let historyList = JSON.parse(localStorage.getItem('noir_history') || '[]');
 
   let isGenerating = false;
-  let activeCost = 0; // 환불용 크레딧 추적
+  let activeCost = 0;
   let abortController = null;
 
   const ADMIN_SECRET_KEY = "noir2026";
@@ -768,7 +766,6 @@
            null;
   }
 
-  // 생성 취소 및 크레딧 자동 환불
   function cancelGeneration() {
     if (!isGenerating) return;
 
