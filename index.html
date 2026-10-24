@@ -702,6 +702,8 @@
   let currentDownloadUrl = '';
   let currentFileType = 'png';
   let isProUser = false;
+  
+  // 💡 브라우저 로컬 저장소 기반 크레딧 보존 & 매일 자정 자동 충전 시스템
   let credits = 150;
   let selectedImageSize = 'landscape_16_9';
   let historyList = JSON.parse(localStorage.getItem('noir_history') || '[]');
@@ -720,12 +722,34 @@
   ];
 
   window.onload = () => { 
+    initCreditSystem(); // 로컬 크레딧 불러오기 및 매일 충전 확인
     renderHistory(); 
-    updateCreditDisplay();
   };
+
+  // 💡 크레딧 저장 및 일일 자동 충전 로직
+  function initCreditSystem() {
+    const today = new Date().toDateString(); // YYYY-MM-DD 형태 날짜 식별
+    const lastDate = localStorage.getItem('noir_last_charge_date');
+    const savedCredits = localStorage.getItem('noir_credits');
+
+    // 날짜가 바뀌었거나 처음 방문한 경우 150 CR로 초기화 충전
+    if (lastDate !== today) {
+      credits = 150;
+      localStorage.setItem('noir_last_charge_date', today);
+      localStorage.setItem('noir_credits', '150');
+    } else if (savedCredits !== null) {
+      // 당일 방문 기록이 있다면 저장되어 있던 잔여 크레딧 불러오기
+      credits = parseInt(savedCredits, 10);
+    } else {
+      credits = 150;
+    }
+
+    updateCreditDisplay();
+  }
 
   function updateCreditDisplay() {
     document.getElementById('creditSpan').innerText = credits;
+    localStorage.setItem('noir_credits', credits.toString()); // 변경될 때마다 자동 저장
   }
 
   function openModal() { document.getElementById('pricingModal').style.display = 'flex'; }
