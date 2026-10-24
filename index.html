@@ -544,7 +544,7 @@
   </div>
 </aside>
 
-<!-- 우측 사이드 예시 쇼케이스 (동영상 대신 100% 안정적인 배경/도시/사이버펑크 이미지 3개) -->
+<!-- 우측 사이드 예시 쇼케이스 (배경/도시/사이버펑크 이미지 3개) -->
 <aside class="side-showcase side-right">
   <div class="side-title">🏙️ Cinematic Scenery</div>
   <div class="side-card">
@@ -632,8 +632,9 @@
       <button class="btn btn-secondary" id="vidBtn" onclick="generateDemoVideo()" disabled>2. 비디오 변환 (50 CR)</button>
     </div>
 
+    <!-- 다운로드 버튼 문구 '워터마크 포함' 오해의 여지 제거 -->
     <div id="downloadArea" style="display: none;">
-      <button class="btn btn-download" onclick="downloadResultFile()">📥 워터마크 포함 결과물 다운로드</button>
+      <button class="btn btn-download" id="downloadBtn" onclick="downloadResultFile()">📥 고화질 결과물 다운로드</button>
     </div>
 
     <div class="status-text" id="statusText">프롬프트를 입력하고 생성을 진행하세요.</div>
@@ -744,6 +745,12 @@
       document.getElementById('planBadge').style.background = "rgba(16, 185, 129, 0.2)";
       document.getElementById('planBadge').style.borderColor = "#10b981";
       document.getElementById('planBadge').style.color = "#a7f3d0";
+
+      // Pro 모드용 다운로드 버튼 문구 업데이트
+      const dlBtn = document.getElementById('downloadBtn');
+      if (dlBtn) {
+        dlBtn.innerText = "📥 고화질 결과물 다운로드 (PRO 워터마크 해제)";
+      }
 
       alert("⚡ [관리자 인증 성공] Pro 모드가 활성화되었습니다. (워터마크 완전 해제)");
       closeModal();
@@ -1060,7 +1067,7 @@
         a.href = canvas.toDataURL('image/png');
         a.download = `noir-studio-${Date.now()}.png`;
         a.click();
-        status.innerText = '✨ 워터마크가 적용된 이미지가 다운로드되었습니다!';
+        status.innerText = '✨ 결과물이 다운로드되었습니다!';
       };
       img.src = currentDownloadUrl;
     } else {
