@@ -1000,7 +1000,31 @@
         pollVideoInBackground(item.id);
       }
     });
+  }// 새로고침 시 대기 중인 작업 자동 복구 및 유령 작업 자동 청소
+  function resumePendingPolls() {
+    let history = JSON.parse(localStorage.getItem('noir_history') || '[]');
+    
+    // 🛡️ [자동 청소] 옛날 형식의 잘못된 멈춤 작업(http로 시작하지 않는 id)은 앱이 알아서 제거
+    let validHistory = history.filter(item => {
+      if (item.status === 'processing' && (!item.id || !item.id.startsWith('http'))) {
+        return false; 
+      }
+      return true;
+    });
+    
+    if (validHistory.length !== history.length) {
+      localStorage.setItem('noir_history', JSON.stringify(validHistory));
+      renderHistory();
+    }
+
+    validHistory.forEach(item => {
+      if (item.status === 'processing' && item.id && item.id.startsWith('http')) {
+        pollVideoInBackground(item.id);
+      }
+    });
   }
+
+
 </script>
 
 </body>
