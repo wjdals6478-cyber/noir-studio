@@ -436,7 +436,7 @@
     </div>
 
     <div class="action-guide" id="actionGuide">
-      ⏱️ <b>예상 소요 시간:</b> 이미지 약 5~10초 / 비디오 약 30~60초<br>
+      ⏱️ <b>소요 안내:</b> 이미지 약 5~10초 / 비디오는 백그라운드 비동기 처리 (자유롭게 다른 작업 가능)<br>
       🎥 <b>스펙:</b> Flux.1 실사 렌더링 & MiniMax 720p HD 5초 모션 비디오
     </div>
 
@@ -536,6 +536,7 @@
   window.onload = () => { 
     initCreditSystem(); 
     renderHistory(); 
+    resumePendingPolls();
     if (isProUser) {
       applyAdminUI();
     }
@@ -745,7 +746,6 @@
     }
   }
 
-  // URL 유효성 검사 헬퍼 함수
   function isValidHttpUrl(string) {
     try {
       const url = new URL(string);
@@ -755,11 +755,11 @@
     }
   }
 
+  // [비동기 백그라운드 방식] 비디오 생성 요청
   async function generateDemoVideo() {
     if (isGenerating) { alert('작업이 진행 중입니다.'); return; }
     if (!currentImageUrl) { alert('먼저 이미지를 생성한 후 비디오로 변환해 주세요!'); return; }
 
-    // 이미지 URL 유효성 방어 체크
     if (!isValidHttpUrl(currentImageUrl)) {
       alert('유효하지 않은 이미지 형식입니다. 외부 URL 형식의 이미지만 영상으로 변환할 수 있습니다.');
       return;
@@ -775,16 +775,9 @@
       activeCost = 0;
     }
 
-    isGenerating = true;
-    abortController = new AbortController();
-
+    const promptText = document.getElementById('prompt').value.trim() || "Cinematic motion, high quality";
     const status = document.getElementById('statusText');
-    const preview = document.getElementById('previewBox');
-    const downloadArea = document.getElementById('downloadArea');
-
-    downloadArea.style.display = 'none';
-    status.innerHTML = `🎬 비디오 변환 요청 중... (약 30~60초 소요) <button onclick="cancelGeneration()" style="margin-left:8px; background:#ef4444; color:white; border:none; padding:2px 8px; border-radius:4px; cursor:pointer;">취소</button>`;
-    preview.innerHTML = '<p style="color: #71717a;">AI 모션 비디오 랜더링 중...</p>';
+    status.innerText = '🎬 비디오 생성 작업이 백그라운드에 등록 중입니다...';
 
     try {
       const response = await fetch('/api/generate', {
@@ -793,69 +786,46 @@
         body: JSON.stringify({
           endpoint: '/fal-ai/minimax/video-01',
           bodyData: {
-            prompt: document.getElementById('prompt').value.trim() || "Cinematic motion, high quality",
+            prompt: promptText,
             image_url: currentImageUrl
           }
-        }),
-        signal: abortController.signal
+        })
       });
 
-      if (!isGenerating) return;
       const data = await response.json();
       if (!response.ok) throw new Error(data.detail || data.error || JSON.stringify(data));
 
-      let videoUrl = data.video?.url || data.output?.video?.url || null;
       let rawReqId = data.request_id || data.requestId || data.id;
-
-      if (!videoUrl && rawReqId) {
-        const reqId = String(rawReqId).trim();
-        let isCompleted = false;
-
-        while (!isCompleted && isGenerating) {
-          await new Promise((resolve, reject) => {
-            const timer = setTimeout(resolve, 5000);
-            abortController.signal.addEventListener('abort', () => { clearTimeout(timer); reject(new DOMException('Aborted', 'AbortError')); }, { once: true });
-          });
-          if (!isGenerating) break;
-
-          const checkRes = await fetch(`/api/generate?endpoint=${encodeURIComponent('/fal-ai/minimax/video-01/requests/' + reqId)}`, {
-            signal: abortController.signal
-          });
-          const checkData = await checkRes.json();
-
-          if (checkData.status === 'COMPLETED') {
-            videoUrl = checkData.video?.url || checkData.output?.video?.url || checkData.response?.video?.url;
-            isCompleted = true;
-          } else if (checkData.status === 'FAILED') {
-            throw new Error('비디오 연산 실패');
-          }
-        }
+      if (!rawReqId) {
+        throw new Error("요청 ID(request_id)를 받지 못했습니다.");
       }
 
-      if (!isGenerating) return;
-      if (videoUrl) {
-        isGenerating = false;
-        activeCost = 0;
-        currentDownloadUrl = videoUrl;
-        currentFileType = 'mp4';
+      const reqId = String(rawReqId).trim();
+      activeCost = 0; // 정상 접수 완료
 
-        const wmDisplay = isProUser ? 'none' : 'block';
-        preview.innerHTML = `
-          <div class="media-wrapper">
-            <video src="${videoUrl}" autoplay loop muted controls style="width:100%; height:100%; object-fit:contain;"></video>
-            <div id="previewWatermark" class="watermark-overlay" style="display: ${wmDisplay};">NOIR STUDIO</div>
-          </div>
-        `;
-        status.innerText = '✅ 비디오 변환 완료!';
-        downloadArea.style.display = 'block';
-        saveToHistory('VIDEO', videoUrl, document.getElementById('prompt').value.trim());
-      } else {
-        throw new Error("비디오 데이터가 없습니다.");
-      }
+      // 보관함에 '생성 중 (processing)' 상태로 즉시 등록
+      let history = JSON.parse(localStorage.getItem('noir_history') || '[]');
+      const newItem = {
+        id: reqId,
+        type: 'VIDEO',
+        url: '',
+        prompt: promptText,
+        status: 'processing',
+        time: new Date().toLocaleTimeString()
+      };
+      history.unshift(newItem);
+      if (history.length > 20) history.pop();
+      localStorage.setItem('noir_history', JSON.stringify(history));
+      renderHistory();
+
+      status.innerHTML = `🚀 백그라운드 작업 등록 완료! 다른 작업을 하시거나 창을 닫아도 보관함에 자동 업데이트됩니다.`;
+      
+      // 화면 멈춤 없는 백그라운드 폴링 시작
+      pollVideoInBackground(reqId);
+
     } catch (err) {
-      if (err.name === 'AbortError') return;
       isGenerating = false;
-      if (activeCost > 0 && !isProUser) {
+      if (!isProUser && activeCost > 0) {
         credits += activeCost;
         updateCreditDisplay();
         status.innerText = `❌ 오류: ${err.message} (크레딧 자동 환불됨)`;
@@ -866,13 +836,71 @@
     }
   }
 
+  // 조용히 실행되는 백그라운드 폴링 함수
+  async function pollVideoInBackground(reqId) {
+    const POLL_INTERVAL = 6000; // 6초마다 체크
+    const MAX_TIME = 15 * 60 * 1000; // 최대 15분 대기
+    const startTime = Date.now();
+
+    const checkInterval = setInterval(async () => {
+      if (Date.now() - startTime > MAX_TIME) {
+        clearInterval(checkInterval);
+        updateHistoryStatus(reqId, 'failed', '시간 초과 (15분 초과)');
+        return;
+      }
+
+      try {
+        const checkRes = await fetch(`/api/generate?endpoint=${encodeURIComponent('/fal-ai/minimax/video-01/requests/' + reqId)}`);
+        const checkData = await checkRes.json();
+
+        if (checkData.status === 'COMPLETED') {
+          clearInterval(checkInterval);
+          const videoUrl = checkData.video?.url || checkData.output?.video?.url || checkData.response?.video?.url;
+          if (videoUrl) {
+            updateHistoryStatus(reqId, 'completed', videoUrl);
+          } else {
+            updateHistoryStatus(reqId, 'failed', '비디오 URL을 찾을 수 없습니다.');
+          }
+        } else if (checkData.status === 'FAILED') {
+          clearInterval(checkInterval);
+          updateHistoryStatus(reqId, 'failed', checkData.error || '생성 실패');
+        }
+      } catch (err) {
+        console.error("백그라운드 폴링 네트워크 에러:", err);
+      }
+    }, POLL_INTERVAL);
+  }
+
+  // 보관함 상태 업데이트 헬퍼
+  function updateHistoryStatus(reqId, status, value) {
+    let history = JSON.parse(localStorage.getItem('noir_history') || '[]');
+    const index = history.findIndex(item => item.id === reqId);
+    
+    if (index !== -1) {
+      if (status === 'completed') {
+        history[index].status = 'done';
+        history[index].url = value;
+      } else if (status === 'failed') {
+        history[index].status = 'failed';
+        history[index].errorMsg = value;
+      }
+      localStorage.setItem('noir_history', JSON.stringify(history));
+      renderHistory();
+
+      if (status === 'completed') {
+        alert(`✨ [비디오 완성] 요청하신 동영상 변환이 완료되었습니다! 보관함을 확인하세요.`);
+      } else if (status === 'failed') {
+        alert(`❌ 비디오 생성 실패: ${value}`);
+      }
+    }
+  }
+
   function saveToHistory(type, url, promptText) {
     try {
       let history = JSON.parse(localStorage.getItem('noir_history') || '[]');
-      history.unshift({ type, url, prompt: promptText || '', time: new Date().toLocaleTimeString() });
+      history.unshift({ type, url, prompt: promptText || '', status: 'done', time: new Date().toLocaleTimeString() });
       if (history.length > 20) history.pop();
       localStorage.setItem('noir_history', JSON.stringify(history));
-      
       renderHistory();
     } catch (e) {
       console.error('History save error:', e);
@@ -890,12 +918,32 @@
       return;
     }
 
-    historyContainer.innerHTML = history.map((item, index) => `
-      <div class="history-item" onclick="loadHistoryItem(${index})">
-        ${item.type === 'VIDEO' ? `<video src="${item.url}" muted></video>` : `<img src="${item.url}" alt="history">`}
-        <span class="badge-tag">${item.type}</span>
-      </div>
-    `).join('');
+    historyContainer.innerHTML = history.map((item, index) => {
+      if (item.status === 'processing') {
+        return `
+          <div class="history-item" style="display:flex; align-items:center; justify-content:center; flex-direction:column; background:#12121a; border-color:var(--accent-purple);" onclick="alert('현재 백그라운드에서 AI 비디오 렌더링이 진행 중입니다. 잠시만 기다려주세요!')">
+            <span style="font-size:1.2rem; margin-bottom:4px;">⏳</span>
+            <span style="font-size:0.65rem; color:#c084fc; font-weight:bold;">생성 중...</span>
+            <span class="badge-tag">VIDEO</span>
+          </div>
+        `;
+      } else if (item.status === 'failed') {
+        return `
+          <div class="history-item" style="display:flex; align-items:center; justify-content:center; flex-direction:column; background:#1a1212; border-color:#ef4444;" onclick="alert('생성 실패: ${item.errorMsg || '알 수 없는 오류'}')">
+            <span style="font-size:1.2rem; margin-bottom:4px;">❌</span>
+            <span style="font-size:0.65rem; color:#ef4444; font-weight:bold;">생성 실패</span>
+            <span class="badge-tag">VIDEO</span>
+          </div>
+        `;
+      } else {
+        return `
+          <div class="history-item" onclick="loadHistoryItem(${index})">
+            ${item.type === 'VIDEO' ? `<video src="${item.url}" muted></video>` : `<img src="${item.url}" alt="history">`}
+            <span class="badge-tag">${item.type}</span>
+          </div>
+        `;
+      }
+    }).join('');
   }
 
   function clearHistory() {
@@ -908,7 +956,7 @@
   function loadHistoryItem(index) {
     const history = JSON.parse(localStorage.getItem('noir_history') || '[]');
     const item = history[index];
-    if (!item) return;
+    if (!item || item.status !== 'done') return;
 
     currentImageUrl = item.url;
     currentDownloadUrl = item.url;
@@ -935,6 +983,16 @@
     }
     const downloadArea = document.getElementById('downloadArea');
     if (downloadArea) downloadArea.style.display = 'block';
+  }
+
+  // 새로고침 시 대기 중인 작업 자동 복구 폴링
+  function resumePendingPolls() {
+    let history = JSON.parse(localStorage.getItem('noir_history') || '[]');
+    history.forEach(item => {
+      if (item.status === 'processing' && item.id) {
+        pollVideoInBackground(item.id);
+      }
+    });
   }
 </script>
 
