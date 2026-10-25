@@ -12,7 +12,10 @@ export default async function handler(req, res) {
     }
 
     try {
-      const response = await fetch(`https://fal.run${endpoint}`, {
+      // 절대 URL이 들어온 경우 그대로 사용하고, 아니면 queue.fal.run 조합
+      const targetUrl = endpoint.startsWith('http') ? endpoint : `https://queue.fal.run${endpoint}`;
+      
+      const response = await fetch(targetUrl, {
         method: 'GET',
         headers: {
           'Authorization': `Key ${FAL_KEY}`,
@@ -26,7 +29,7 @@ export default async function handler(req, res) {
     }
   }
 
-  // 2. 이미지/비디오 생성 요청(POST 요청) 처리
+  // 2. 이미지/비디오 생성 요청(POST 요청) 처리 -> queue.fal.run 사용으로 504 타임아웃 방지
   if (req.method === 'POST') {
     try {
       const { endpoint, bodyData } = req.body;
@@ -34,7 +37,7 @@ export default async function handler(req, res) {
         return res.status(400).json({ error: "Endpoint is missing in request body" });
       }
 
-      const response = await fetch(`https://fal.run${endpoint}`, {
+      const response = await fetch(`https://queue.fal.run${endpoint}`, {
         method: 'POST',
         headers: {
           'Authorization': `Key ${FAL_KEY}`,
