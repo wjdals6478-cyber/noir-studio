@@ -841,9 +841,9 @@
     }
   }
 
-  // 조용히 실행되는 백그라운드 폴링 함수 (만능 URL 탐색 적용)
+  // 조용히 실행되는 백그라운드 폴링 함수 (최종 COMPLETED 및 강력한 URL 추출 적용)
   async function pollVideoInBackground(statusUrl) {
-    const POLL_INTERVAL = 5000; // 5초마다 체크
+    const POLL_INTERVAL = 4000; // 4초마다 체크
     const MAX_TIME = 15 * 60 * 1000; // 최대 15분 대기
     const startTime = Date.now();
 
@@ -860,8 +860,8 @@
 
         const statusUpper = (checkData.status || '').toUpperCase();
 
-        if (statusUpper === 'COMPLETED' || checkData.video || checkData.output || checkData.response || checkData.url) {
-          const videoUrl = 
+        if (statusUpper === 'COMPLETED' || checkData.video || checkData.output || checkData.url) {
+          let videoUrl = 
             checkData.video?.url || 
             checkData.output?.video?.url || 
             checkData.response?.video?.url || 
@@ -869,8 +869,11 @@
             checkData.result?.video?.url || 
             checkData.url || 
             checkData.video_url ||
-            checkData.output?.url ||
-            extractAnyUrl(checkData);
+            checkData.output?.url;
+
+          if (!videoUrl) {
+            videoUrl = extractAnyUrl(checkData);
+          }
 
           if (videoUrl) {
             clearInterval(checkInterval);
@@ -886,12 +889,12 @@
     }, POLL_INTERVAL);
   }
 
-  // JSON 객체 내부를 깊게 탐색하여 .mp4 또는 미디어 링크를 무조건 찾아내는 함수
+  // 응답 데이터 안에서 http 링크를 무조건 찾아내는 강력한 추출기
   function extractAnyUrl(obj) {
     if (!obj || typeof obj !== 'object') return null;
     for (let key in obj) {
       const val = obj[key];
-      if (typeof val === 'string' && val.startsWith('http') && (val.includes('.mp4') || val.includes('.mov') || val.includes('fal.media') || val.includes('storage') || val.includes('video'))) {
+      if (typeof val === 'string' && val.startsWith('http') && !val.includes('/requests/')) {
         return val;
       } else if (typeof val === 'object' && val !== null) {
         const found = extractAnyUrl(val);
