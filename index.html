@@ -841,7 +841,7 @@
     }
   }
 
-  // 조용히 실행되는 백그라운드 폴링 함수 (최종 COMPLETED 및 강력한 URL 추출 적용)
+  // 조용히 실행되는 백그라운드 폴링 함수 (/status 감지 시 원본 URL 재조회 반영)
   async function pollVideoInBackground(statusUrl) {
     const POLL_INTERVAL = 4000; // 4초마다 체크
     const MAX_TIME = 15 * 60 * 1000; // 최대 15분 대기
@@ -860,19 +860,28 @@
 
         const statusUpper = (checkData.status || '').toUpperCase();
 
-        if (statusUpper === 'COMPLETED' || checkData.video || checkData.output || checkData.url) {
+        if (statusUpper === 'COMPLETED') {
+          // 💡 핵심 수정: /status 응답에는 비디오 URL이 없으므로 /status를 떼어내고 진짜 결과 데이터를 가져옴
+          let resultUrl = statusUrl;
+          if (resultUrl.endsWith('/status')) {
+            resultUrl = resultUrl.replace(/\/status$/, '');
+          }
+
+          const resultRes = await fetch(`/api/generate?endpoint=${encodeURIComponent(resultUrl)}`);
+          const finalData = await resultRes.json();
+
           let videoUrl = 
-            checkData.video?.url || 
-            checkData.output?.video?.url || 
-            checkData.response?.video?.url || 
-            checkData.data?.video?.url || 
-            checkData.result?.video?.url || 
-            checkData.url || 
-            checkData.video_url ||
-            checkData.output?.url;
+            finalData.video?.url || 
+            finalData.output?.video?.url || 
+            finalData.response?.video?.url || 
+            finalData.data?.video?.url || 
+            finalData.result?.video?.url || 
+            finalData.url || 
+            finalData.video_url ||
+            finalData.output?.url;
 
           if (!videoUrl) {
-            videoUrl = extractAnyUrl(checkData);
+            videoUrl = extractAnyUrl(finalData);
           }
 
           if (videoUrl) {
