@@ -4,7 +4,7 @@ export default async function handler(req, res) {
     return res.status(500).json({ error: "FAL_KEY가 Vercel 환경 변수에 설정되지 않았습니다." });
   }
 
-  // 1. 상태 확인(GET 요청) 처리
+  // 1. 상태 확인(GET 요청) 처리 (폴링 용도)
   if (req.method === 'GET') {
     const endpoint = req.query.endpoint;
     if (!endpoint) {
@@ -29,7 +29,7 @@ export default async function handler(req, res) {
     }
   }
 
-  // 2. 이미지/비디오 생성 요청(POST 요청) 처리 -> queue.fal.run 사용으로 504 타임아웃 방지
+  // 2. 이미지/비디오 생성 요청(POST 요청) 처리 -> queue.fal.run을 사용하여 504 타임아웃 방지
   if (req.method === 'POST') {
     try {
       const { endpoint, bodyData } = req.body;
