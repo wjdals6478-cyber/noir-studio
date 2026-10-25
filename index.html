@@ -436,7 +436,7 @@
     </div>
 
     <div class="action-guide" id="actionGuide">
-      ⏱️ <b>소요 안내:</b> 이미지 약 5~10초 / 비디오 약 5분~10분 (자유롭게 다른 작업 가능)<br>
+      ⏱️ <b>소요 안내:</b> 이미지 약 5~10초 / 비디오는 백그라운드 비동기 처리 (자유롭게 다른 작업 가능)<br>
       🎥 <b>스펙:</b> Flux.1 실사 렌더링 & MiniMax 720p HD 5초 모션 비디오
     </div>
 
@@ -795,18 +795,23 @@
       const data = await response.json();
       if (!response.ok) throw new Error(data.detail || data.error || JSON.stringify(data));
 
+      let statusUrl = data.status_url || data.response_url;
       let rawReqId = data.request_id || data.requestId || data.id;
-      if (!rawReqId) {
-        throw new Error("요청 ID(request_id)를 받지 못했습니다.");
+
+      if (!statusUrl && rawReqId) {
+        statusUrl = `https://queue.fal.run/fal-ai/minimax/video-01/requests/${rawReqId}`;
       }
 
-      const reqId = String(rawReqId).trim();
+      if (!statusUrl) {
+        throw new Error("요청 상태 URL을 받지 못했습니다.");
+      }
+
       activeCost = 0; // 정상 접수 완료
 
-      // 보관함에 '생성 중 (processing)' 상태로 즉시 등록
+      // 보관함에 statusUrl을 ID로 하여 등록
       let history = JSON.parse(localStorage.getItem('noir_history') || '[]');
       const newItem = {
-        id: reqId,
+        id: statusUrl,
         type: 'VIDEO',
         url: '',
         prompt: promptText,
@@ -821,7 +826,7 @@
       status.innerHTML = `🚀 백그라운드 작업 등록 완료! 다른 작업을 하시거나 창을 닫아도 보관함에 자동 업데이트됩니다.`;
       
       // 화면 멈춤 없는 백그라운드 폴링 시작
-      pollVideoInBackground(reqId);
+      pollVideoInBackground(statusUrl);
 
     } catch (err) {
       isGenerating = false;
@@ -837,7 +842,7 @@
   }
 
   // 조용히 실행되는 백그라운드 폴링 함수
-  async function pollVideoInBackground(reqId) {
+  async function pollVideoInBackground(statusUrl) {
     const POLL_INTERVAL = 6000; // 6초마다 체크
     const MAX_TIME = 15 * 60 * 1000; // 최대 15분 대기
     const startTime = Date.now();
@@ -845,25 +850,27 @@
     const checkInterval = setInterval(async () => {
       if (Date.now() - startTime > MAX_TIME) {
         clearInterval(checkInterval);
-        updateHistoryStatus(reqId, 'failed', '시간 초과 (15분 초과)');
+        updateHistoryStatus(statusUrl, 'failed', '시간 초과 (15분 초과)');
         return;
       }
 
       try {
-        const checkRes = await fetch(`/api/generate?endpoint=${encodeURIComponent('/fal-ai/minimax/video-01/requests/' + reqId)}`);
+        const checkRes = await fetch(`/api/generate?endpoint=${encodeURIComponent(statusUrl)}`);
         const checkData = await checkRes.json();
 
-        if (checkData.status === 'COMPLETED') {
+        const statusUpper = (checkData.status || '').toUpperCase();
+
+        if (statusUpper === 'COMPLETED' || checkData.video || checkData.output || checkData.url) {
           clearInterval(checkInterval);
-          const videoUrl = checkData.video?.url || checkData.output?.video?.url || checkData.response?.video?.url;
+          const videoUrl = checkData.video?.url || checkData.output?.video?.url || checkData.response?.video?.url || checkData.url;
           if (videoUrl) {
-            updateHistoryStatus(reqId, 'completed', videoUrl);
+            updateHistoryStatus(statusUrl, 'completed', videoUrl);
           } else {
-            updateHistoryStatus(reqId, 'failed', '비디오 URL을 찾을 수 없습니다.');
+            updateHistoryStatus(statusUrl, 'failed', '비디오 URL을 찾을 수 없습니다.');
           }
-        } else if (checkData.status === 'FAILED') {
+        } else if (statusUpper === 'FAILED') {
           clearInterval(checkInterval);
-          updateHistoryStatus(reqId, 'failed', checkData.error || '생성 실패');
+          updateHistoryStatus(statusUrl, 'failed', checkData.error || '생성 실패');
         }
       } catch (err) {
         console.error("백그라운드 폴링 네트워크 에러:", err);
@@ -872,9 +879,9 @@
   }
 
   // 보관함 상태 업데이트 헬퍼
-  function updateHistoryStatus(reqId, status, value) {
+  function updateHistoryStatus(statusUrl, status, value) {
     let history = JSON.parse(localStorage.getItem('noir_history') || '[]');
-    const index = history.findIndex(item => item.id === reqId);
+    const index = history.findIndex(item => item.id === statusUrl);
     
     if (index !== -1) {
       if (status === 'completed') {
