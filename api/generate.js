@@ -16,18 +16,25 @@ export default async function handler(req, res) {
 
   const lockedErrorResponse = {
     error: 'API_ACCOUNT_LOCKED',
-    message: 'Fal.ai 크레딧이 부족하거나 계정이 잠겼습니다. 대시보드를 확인해주세요.'
+    message: 'Fal.ai 크레딧이 부족하거나 계정이 잠겼습니다.'
   };
 
   try {
-    // 1. GET 요청 (비디오 생성 상태 폴링 및 결과 조회)
+    // 1. GET 요청 (상태 폴링)
     if (req.method === 'GET') {
       const endpoint = req.query.endpoint;
       if (!endpoint) {
-        return res.status(400).json({ error: "Endpoint is required for GET requests" });
+        return res.status(200).json({ status: "IN_PROGRESS" });
       }
 
-      // 절대 URL이거나 큐 상태 조회 주소인 경우 그대로 전달
+      // 🛡️ [핵심 방어] 모델 주소로 잘못된 GET 폴링이 들어오면 405 대신 안전한 대기 상태 반환
+      if (!endpoint.includes('/requests/') && !endpoint.startsWith('http')) {
+        return res.status(200).json({ 
+          status: "IN_PROGRESS", 
+          message: "Waiting for request queue..." 
+        });
+      }
+
       const targetUrl = endpoint.startsWith('http') ? endpoint : `https://queue.fal.run${endpoint}`;
       
       const response = await fetch(targetUrl, {
@@ -41,20 +48,35 @@ export default async function handler(req, res) {
       const data = await response.json().catch(() => ({}));
 
       if (checkIsLocked(response.status, data)) {
-        return res.status(403).json(lockedErrorResponse);
+        return res.status(200).json({ status: "FAILED", ...lockedErrorResponse });
       }
 
-      return res.status(response.status).json(data);
+      return res.status(200).json(data);
     }
 
-    // 2. POST 요청 (이미지 및 비디오 생성 요청)
+    // 2. POST 요청 (생성 요청 및 폴링 우회)
     if (req.method === 'POST') {
       const { endpoint, bodyData } = req.body;
       if (!endpoint) {
-        return res.status(400).json({ error: "Endpoint is missing in request body" });
+        return res.status(200).json({ error: "Endpoint is missing" });
       }
 
-      // 비디오 및 큐 모델은 queue.fal.run 사용, 이미지는 fal.run 사용
+      const isPolling = endpoint.includes('/requests/') || endpoint.startsWith('http');
+
+      if (isPolling) {
+        const targetUrl = endpoint.startsWith('http') ? endpoint : `https://queue.fal.run${endpoint}`;
+        const response = await fetch(targetUrl, {
+          method: 'GET',
+          headers: {
+            'Authorization': `Key ${FAL_KEY}`,
+            'Accept': 'application/json'
+          }
+        });
+        const data = await response.json().catch(() => ({}));
+        return res.status(200).json(data);
+      }
+
+      // 일반 생성 요청 (POST)
       const isQueueModel = endpoint.includes('minimax') || endpoint.includes('video') || endpoint.includes('queue');
       const baseUrl = isQueueModel ? 'https://queue.fal.run' : 'https://fal.run';
 
@@ -79,7 +101,7 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: "Method not allowed" });
 
   } catch (err) {
-    return res.status(500).json({ error: err.message });
+    return res.status(200).json({ status: "IN_PROGRESS", error: err.message });
   }
 }
 
