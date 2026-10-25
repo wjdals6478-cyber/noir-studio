@@ -22,7 +22,19 @@ export default async function handler(req, res) {
           'Accept': 'application/json'
         }
       });
-      const data = await response.json();
+      
+      // 기존 response.json()에서 에러가 나지 않도록 안전 장치 추가
+      const data = await response.json().catch(() => ({}));
+
+      // [추가] 계정 잠김 / 크레딧 부족 방어 로직
+      const dataStr = JSON.stringify(data || {});
+      if (response.status === 403 || data?.code === 'TOP_UP' || dataStr.includes('locked') || dataStr.includes('TOP_UP')) {
+        return res.status(403).json({
+          error: 'API_ACCOUNT_LOCKED',
+          message: 'Fal.ai 크레딧이 모두 소진되었거나 계정이 잠겼습니다. 관리자 대시보드에서 크레딧을 충전해 주세요.'
+        });
+      }
+
       return res.status(response.status).json(data);
     } catch (err) {
       return res.status(500).json({ error: err.message });
@@ -50,7 +62,18 @@ export default async function handler(req, res) {
         body: JSON.stringify(bodyData || {})
       });
 
-      const data = await response.json();
+      // 기존 response.json()에서 에러가 나지 않도록 안전 장치 추가
+      const data = await response.json().catch(() => ({}));
+
+      // [추가] 계정 잠김 / 크레딧 부족 방어 로직
+      const dataStr = JSON.stringify(data || {});
+      if (response.status === 403 || data?.code === 'TOP_UP' || dataStr.includes('locked') || dataStr.includes('TOP_UP')) {
+        return res.status(403).json({
+          error: 'API_ACCOUNT_LOCKED',
+          message: 'Fal.ai 크레딧이 모두 소진되었거나 계정이 잠겼습니다. 관리자 대시보드에서 크레딧을 충전해 주세요.'
+        });
+      }
+
       return res.status(response.status).json(data);
     } catch (err) {
       return res.status(500).json({ error: err.message });
