@@ -841,7 +841,7 @@
     }
   }
 
-  // 조용히 실행되는 백그라운드 폴링 함수
+  // 조용히 실행되는 백그라운드 폴링 함수 (모든 응답 구조 완벽 대응)
   async function pollVideoInBackground(statusUrl) {
     const POLL_INTERVAL = 6000; // 6초마다 체크
     const MAX_TIME = 15 * 60 * 1000; // 최대 15분 대기
@@ -860,13 +860,20 @@
 
         const statusUpper = (checkData.status || '').toUpperCase();
 
-        if (statusUpper === 'COMPLETED' || checkData.video || checkData.output || checkData.url) {
-          clearInterval(checkInterval);
-          const videoUrl = checkData.video?.url || checkData.output?.video?.url || checkData.response?.video?.url || checkData.url;
+        if (statusUpper === 'COMPLETED' || checkData.video || checkData.output || checkData.response || checkData.url) {
+          const videoUrl = 
+            checkData.video?.url || 
+            checkData.output?.video?.url || 
+            checkData.response?.video?.url || 
+            checkData.data?.video?.url || 
+            checkData.result?.video?.url || 
+            checkData.url || 
+            checkData.video_url ||
+            extractAnyUrl(checkData);
+
           if (videoUrl) {
+            clearInterval(checkInterval);
             updateHistoryStatus(statusUrl, 'completed', videoUrl);
-          } else {
-            updateHistoryStatus(statusUrl, 'failed', '비디오 URL을 찾을 수 없습니다.');
           }
         } else if (statusUpper === 'FAILED') {
           clearInterval(checkInterval);
@@ -876,6 +883,21 @@
         console.error("백그라운드 폴링 네트워크 에러:", err);
       }
     }, POLL_INTERVAL);
+  }
+
+  // JSON 객체 내에서 비디오/미디어 URL을 재귀적으로 찾아내는 안전 장치
+  function extractAnyUrl(obj) {
+    if (!obj || typeof obj !== 'object') return null;
+    for (let key in obj) {
+      const val = obj[key];
+      if (typeof val === 'string' && val.startsWith('http') && (val.includes('.mp4') || val.includes('fal.media') || val.includes('storage') || val.includes('video'))) {
+        return val;
+      } else if (typeof val === 'object') {
+        const found = extractAnyUrl(val);
+        if (found) return found;
+      }
+    }
+    return null;
   }
 
   // 보관함 상태 업데이트 헬퍼
@@ -992,19 +1014,10 @@
     if (downloadArea) downloadArea.style.display = 'block';
   }
 
-  // 새로고침 시 대기 중인 작업 자동 복구 폴링
-  function resumePendingPolls() {
-    let history = JSON.parse(localStorage.getItem('noir_history') || '[]');
-    history.forEach(item => {
-      if (item.status === 'processing' && item.id) {
-        pollVideoInBackground(item.id);
-      }
-    });
-  }// 새로고침 시 대기 중인 작업 자동 복구 및 유령 작업 자동 청소
+  // 새로고침 시 대기 중인 작업 자동 복구 및 유령 작업 자동 청소
   function resumePendingPolls() {
     let history = JSON.parse(localStorage.getItem('noir_history') || '[]');
     
-    // 🛡️ [자동 청소] 옛날 형식의 잘못된 멈춤 작업(http로 시작하지 않는 id)은 앱이 알아서 제거
     let validHistory = history.filter(item => {
       if (item.status === 'processing' && (!item.id || !item.id.startsWith('http'))) {
         return false; 
@@ -1023,8 +1036,6 @@
       }
     });
   }
-
-
 </script>
 
 </body>
