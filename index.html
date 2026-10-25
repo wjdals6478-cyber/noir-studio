@@ -326,20 +326,6 @@
       border-radius: 4px;
       font-weight: bold;
     }
-    .history-del-btn {
-      position: absolute;
-      bottom: 4px;
-      right: 4px;
-      background: rgba(239, 68, 68, 0.8);
-      color: white;
-      border: none;
-      font-size: 0.6rem;
-      padding: 2px 5px;
-      border-radius: 4px;
-      cursor: pointer;
-      z-index: 5;
-    }
-    .history-del-btn:hover { background: rgb(239, 68, 68); }
 
     .footer {
       grid-column: 1 / -1;
@@ -376,6 +362,19 @@
       background: none; border: none;
       color: #71717a; font-size: 1.5rem;
       cursor: pointer;
+    }
+    .benefit-list {
+      margin: 16px 0;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      font-size: 0.85rem;
+      color: #d1d5db;
+    }
+    .benefit-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
     }
   </style>
 </head>
@@ -446,7 +445,7 @@
       <button class="btn btn-secondary" id="vidBtn" onclick="generateDemoVideo()" disabled>2. 비디오 변환 (50 CR)</button>
     </div>
 
-    <!-- 다운로드 영역 (링크 복사, 공유하기 제거 완료) -->
+    <!-- 다운로드 영역 -->
     <div id="downloadArea" style="display: none; display: flex; flex-direction: column; gap: 8px;">
       <button class="btn btn-download" id="downloadBtn" onclick="downloadResultFile()">📥 고화질 결과물 다운로드</button>
     </div>
@@ -473,18 +472,25 @@
   </div>
 </div>
 
+<!-- PRO 플랜 혜택 안내 모달창 -->
 <div class="modal-backdrop" id="pricingModal">
   <div class="modal-card">
     <button class="close-btn" onclick="closeModal()">&times;</button>
-    <h2 style="text-align: center; font-size: 1.2rem;">NOIR STUDIO 멤버십 플랜</h2>
-    <p style="text-align: center; color: #71717a; font-size: 0.8rem; margin-top: 4px;">상업적 이용 및 워터마크 제거 혜택을 누려보세요.</p>
-    <div style="margin-top: 20px;">
-      <button class="btn btn-secondary" onclick="alert('준비 중입니다. 프로 플랜 결제 기능은 오픈 예정입니다.'); closeModal();" style="width:100%;">⚡ Pro 플랜 업그레이드 (결제 기능 준비 중)</button>
+    <h2 style="text-align: center; font-size: 1.2rem; color: #fff;">NOIR STUDIO PRO 멤버십</h2>
+    <p style="text-align: center; color: #a1a1aa; font-size: 0.8rem; margin-top: 4px;">크리에이터를 위한 압도적인 생성 성능과 프리미엄 혜택</p>
+    
+    <div class="benefit-list">
+      <div class="benefit-item">⚡ <b>초고속 생성 우선순위 배정</b> (지연 없는 빠른 렌더링)</div>
+      <div class="benefit-item">🪙 <b>매월 1,000 크레딧</b> 충전 및 제공</div>
+      <div class="benefit-item">💼 <b>상업적 이용 권한</b> 완벽 보장</div>
+      <div class="benefit-item">🎬 <b>고화질(HD) 무손실 다운로드 및 워터마크 해제</b></div>
+    </div>
+
+    <div style="margin-top: 24px;">
+      <button class="btn btn-secondary" onclick="alert('현재 결제 기능을 안전하게 준비 중입니다. 곧 찾아뵙겠습니다!'); closeModal();" style="width:100%;">⚡ Pro 플랜 업그레이드 (결제 시스템 준비 중)</button>
     </div>
   </div>
 </div>
-
-<canvas id="watermarkCanvas" style="display: none;"></canvas>
 
 <script>
   let currentImageUrl = '';
@@ -501,7 +507,6 @@
 
   const ADMIN_SECRET_KEY = "noir2026";
 
-  // Free Plan 5연타 감지용 변수
   let planClickCount = 0;
   let planClickTimer = null;
 
@@ -634,7 +639,6 @@
     downloadArea.style.display = 'none';
   }
 
-  // 다운로드 파일 실행 함수
   async function downloadResultFile() {
     if (!currentDownloadUrl) {
       alert('다운로드할 결과물이 없습니다.');
@@ -741,186 +745,197 @@
     }
   }
 
+  // URL 유효성 검사 헬퍼 함수
+  function isValidHttpUrl(string) {
+    try {
+      const url = new URL(string);
+      return url.protocol === "http:" || url.protocol === "https:";
+    } catch (_) {
+      return false;
+    }
+  }
+
   async function generateDemoVideo() {
-      if (isGenerating) { alert('작업이 진행 중입니다.'); return; }
-      if (!currentImageUrl) { alert('먼저 이미지를 생성한 후 비디오로 변환해 주세요!'); return; }
+    if (isGenerating) { alert('작업이 진행 중입니다.'); return; }
+    if (!currentImageUrl) { alert('먼저 이미지를 생성한 후 비디오로 변환해 주세요!'); return; }
 
-      const cost = 50;
-      if (!isProUser) {
-        if (credits < cost) { openModal(); alert('크레딧이 부족합니다!'); return; }
-        credits -= cost;
-        activeCost = cost;
-        updateCreditDisplay();
-      } else {
-        activeCost = 0;
-      }
+    // 이미지 URL 유효성 방어 체크
+    if (!isValidHttpUrl(currentImageUrl)) {
+      alert('유효하지 않은 이미지 형식입니다. 외부 URL 형식의 이미지만 영상으로 변환할 수 있습니다.');
+      return;
+    }
 
-      isGenerating = true;
-      abortController = new AbortController();
+    const cost = 50;
+    if (!isProUser) {
+      if (credits < cost) { openModal(); alert('크레딧이 부족합니다!'); return; }
+      credits -= cost;
+      activeCost = cost;
+      updateCreditDisplay();
+    } else {
+      activeCost = 0;
+    }
 
-      const status = document.getElementById('statusText');
-      const preview = document.getElementById('previewBox');
-      const downloadArea = document.getElementById('downloadArea');
+    isGenerating = true;
+    abortController = new AbortController();
 
-      downloadArea.style.display = 'none';
-      status.innerHTML = `🎬 비디오 변환 요청 중... (약 30~60초 소요) <button onclick="cancelGeneration()" style="margin-left:8px; background:#ef4444; color:white; border:none; padding:2px 8px; border-radius:4px; cursor:pointer;">취소</button>`;
-      preview.innerHTML = '<p style="color: #71717a;">AI 모션 비디오 랜더링 중...</p>';
+    const status = document.getElementById('statusText');
+    const preview = document.getElementById('previewBox');
+    const downloadArea = document.getElementById('downloadArea');
 
-      try {
-        const response = await fetch('/api/generate', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            endpoint: '/fal-ai/minimax/video-01',
-            bodyData: {
-              prompt: document.getElementById('prompt').value.trim() || "Cinematic motion, high quality",
-              image_url: currentImageUrl
-            }
-          }),
-          signal: abortController.signal
-        });
+    downloadArea.style.display = 'none';
+    status.innerHTML = `🎬 비디오 변환 요청 중... (약 30~60초 소요) <button onclick="cancelGeneration()" style="margin-left:8px; background:#ef4444; color:white; border:none; padding:2px 8px; border-radius:4px; cursor:pointer;">취소</button>`;
+    preview.innerHTML = '<p style="color: #71717a;">AI 모션 비디오 랜더링 중...</p>';
 
-        if (!isGenerating) return;
-        const data = await response.json();
-        if (!response.ok) throw new Error(data.detail || data.error || JSON.stringify(data));
+    try {
+      const response = await fetch('/api/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          endpoint: '/fal-ai/minimax/video-01',
+          bodyData: {
+            prompt: document.getElementById('prompt').value.trim() || "Cinematic motion, high quality",
+            image_url: currentImageUrl
+          }
+        }),
+        signal: abortController.signal
+      });
 
-        let videoUrl = data.video?.url || data.output?.video?.url || null;
-        let rawReqId = data.request_id || data.requestId || data.id;
+      if (!isGenerating) return;
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.detail || data.error || JSON.stringify(data));
 
-        if (!videoUrl && rawReqId) {
-          const reqId = String(rawReqId).trim();
-          let isCompleted = false;
+      let videoUrl = data.video?.url || data.output?.video?.url || null;
+      let rawReqId = data.request_id || data.requestId || data.id;
 
-          while (!isCompleted && isGenerating) {
-            await new Promise((resolve, reject) => {
-              const timer = setTimeout(resolve, 5000);
-              abortController.signal.addEventListener('abort', () => { clearTimeout(timer); reject(new DOMException('Aborted', 'AbortError')); }, { once: true });
-            });
-            if (!isGenerating) break;
+      if (!videoUrl && rawReqId) {
+        const reqId = String(rawReqId).trim();
+        let isCompleted = false;
 
-            const checkRes = await fetch(`/api/generate?endpoint=${encodeURIComponent('/fal-ai/minimax/video-01/requests/' + reqId)}`, {
-              signal: abortController.signal
-            });
-            const checkData = await checkRes.json();
+        while (!isCompleted && isGenerating) {
+          await new Promise((resolve, reject) => {
+            const timer = setTimeout(resolve, 5000);
+            abortController.signal.addEventListener('abort', () => { clearTimeout(timer); reject(new DOMException('Aborted', 'AbortError')); }, { once: true });
+          });
+          if (!isGenerating) break;
 
-            if (checkData.status === 'COMPLETED') {
-              videoUrl = checkData.video?.url || checkData.output?.video?.url || checkData.response?.video?.url;
-              isCompleted = true;
-            } else if (checkData.status === 'FAILED') {
-              throw new Error('비디오 연산 실패');
-            }
+          const checkRes = await fetch(`/api/generate?endpoint=${encodeURIComponent('/fal-ai/minimax/video-01/requests/' + reqId)}`, {
+            signal: abortController.signal
+          });
+          const checkData = await checkRes.json();
+
+          if (checkData.status === 'COMPLETED') {
+            videoUrl = checkData.video?.url || checkData.output?.video?.url || checkData.response?.video?.url;
+            isCompleted = true;
+          } else if (checkData.status === 'FAILED') {
+            throw new Error('비디오 연산 실패');
           }
         }
+      }
 
-        if (!isGenerating) return;
-        if (videoUrl) {
-          isGenerating = false;
-          activeCost = 0;
-          currentDownloadUrl = videoUrl;
-          currentFileType = 'mp4';
-
-          const wmDisplay = isProUser ? 'none' : 'block';
-          preview.innerHTML = `
-            <div class="media-wrapper">
-              <video src="${videoUrl}" autoplay loop muted controls style="width:100%; height:100%; object-fit:contain;"></video>
-              <div id="previewWatermark" class="watermark-overlay" style="display: ${wmDisplay};">NOIR STUDIO</div>
-            </div>
-          `;
-          status.innerText = '✅ 비디오 변환 완료!';
-          downloadArea.style.display = 'block';
-          saveToHistory('VIDEO', videoUrl, document.getElementById('prompt').value.trim());
-        } else {
-          throw new Error("비디오 데이터가 없습니다.");
-        }
-      } catch (err) {
-        if (err.name === 'AbortError') return;
+      if (!isGenerating) return;
+      if (videoUrl) {
         isGenerating = false;
-        if (activeCost > 0 && !isProUser) {
-          credits += activeCost;
-          updateCreditDisplay();
-          status.innerText = `❌ 오류: ${err.message} (크레딧 자동 환불됨)`;
-        } else {
-          status.innerText = '❌ 오류: ' + err.message;
-        }
         activeCost = 0;
-      }
-    }
+        currentDownloadUrl = videoUrl;
+        currentFileType = 'mp4';
 
-    function saveToHistory(type, url, promptText) {
-      try {
-        let history = JSON.parse(localStorage.getItem('noir_history') || '[]');
-        history.unshift({ type, url, prompt: promptText || '', time: new Date().toLocaleTimeString() });
-        if (history.length > 20) history.pop();
-        localStorage.setItem('noir_history', JSON.stringify(history));
-        
-        renderHistory();
-      } catch (e) {
-        console.error('History save error:', e);
-      }
-    }
-
-    function renderHistory() {
-      const historyContainer = document.querySelector('.history-grid');
-      if (!historyContainer) return;
-
-      const history = JSON.parse(localStorage.getItem('noir_history') || '[]');
-      
-      if (history.length === 0) {
-        historyContainer.innerHTML = '<p style="color: #71717a; font-size: 13px; text-align: center; width: 100%; grid-column: 1 / -1;">아직 생성된 작업물이 없습니다.</p>';
-        return;
-      }
-
-      historyContainer.innerHTML = history.map((item, index) => `
-        <div class="history-item" onclick="loadHistoryItem(${index})">
-          ${item.type === 'VIDEO' ? `<video src="${item.url}" muted></video>` : `<img src="${item.url}" alt="history">`}
-          <span class="badge-tag">${item.type}</span>
-        </div>
-      `).join('');
-    }
-
-    // 기록 비우기 기능 추가
-    function clearHistory() {
-      if (confirm('보관함의 모든 기록을 삭제하시겠습니까?')) {
-        localStorage.removeItem('noir_history');
-        renderHistory();
-      }
-    }
-
-    function loadHistoryItem(index) {
-      const history = JSON.parse(localStorage.getItem('noir_history') || '[]');
-      const item = history[index];
-      if (!item) return;
-
-      currentImageUrl = item.url;
-      currentDownloadUrl = item.url;
-      currentFileType = (item.type === 'VIDEO') ? 'mp4' : 'png';
-
-      const preview = document.getElementById('previewBox');
-      if (preview) {
         const wmDisplay = isProUser ? 'none' : 'block';
-        if (item.type === 'VIDEO') {
-          preview.innerHTML = `
-            <div class="media-wrapper">
-              <video src="${item.url}" autoplay loop muted controls style="width:100%; height:100%; object-fit:contain;"></video>
-              <div id="previewWatermark" class="watermark-overlay" style="display: ${wmDisplay};">NOIR STUDIO</div>
-            </div>
-          `;
-        } else {
-          preview.innerHTML = `
-            <div class="media-wrapper">
-              <img src="${item.url}" alt="Generated Media">
-              <div id="previewWatermark" class="watermark-overlay" style="display: ${wmDisplay};">NOIR STUDIO</div>
-            </div>
-          `;
-        }
+        preview.innerHTML = `
+          <div class="media-wrapper">
+            <video src="${videoUrl}" autoplay loop muted controls style="width:100%; height:100%; object-fit:contain;"></video>
+            <div id="previewWatermark" class="watermark-overlay" style="display: ${wmDisplay};">NOIR STUDIO</div>
+          </div>
+        `;
+        status.innerText = '✅ 비디오 변환 완료!';
+        downloadArea.style.display = 'block';
+        saveToHistory('VIDEO', videoUrl, document.getElementById('prompt').value.trim());
+      } else {
+        throw new Error("비디오 데이터가 없습니다.");
       }
-      const downloadArea = document.getElementById('downloadArea');
-      if (downloadArea) downloadArea.style.display = 'block';
+    } catch (err) {
+      if (err.name === 'AbortError') return;
+      isGenerating = false;
+      if (activeCost > 0 && !isProUser) {
+        credits += activeCost;
+        updateCreditDisplay();
+        status.innerText = `❌ 오류: ${err.message} (크레딧 자동 환불됨)`;
+      } else {
+        status.innerText = '❌ 오류: ' + err.message;
+      }
+      activeCost = 0;
+    }
+  }
+
+  function saveToHistory(type, url, promptText) {
+    try {
+      let history = JSON.parse(localStorage.getItem('noir_history') || '[]');
+      history.unshift({ type, url, prompt: promptText || '', time: new Date().toLocaleTimeString() });
+      if (history.length > 20) history.pop();
+      localStorage.setItem('noir_history', JSON.stringify(history));
+      
+      renderHistory();
+    } catch (e) {
+      console.error('History save error:', e);
+    }
+  }
+
+  function renderHistory() {
+    const historyContainer = document.querySelector('.history-grid');
+    if (!historyContainer) return;
+
+    const history = JSON.parse(localStorage.getItem('noir_history') || '[]');
+    
+    if (history.length === 0) {
+      historyContainer.innerHTML = '<p style="color: #71717a; font-size: 13px; text-align: center; width: 100%; grid-column: 1 / -1;">아직 생성된 작업물이 없습니다.</p>';
+      return;
     }
 
-    window.addEventListener('DOMContentLoaded', () => {
+    historyContainer.innerHTML = history.map((item, index) => `
+      <div class="history-item" onclick="loadHistoryItem(${index})">
+        ${item.type === 'VIDEO' ? `<video src="${item.url}" muted></video>` : `<img src="${item.url}" alt="history">`}
+        <span class="badge-tag">${item.type}</span>
+      </div>
+    `).join('');
+  }
+
+  function clearHistory() {
+    if (confirm('보관함의 모든 기록을 삭제하시겠습니까?')) {
+      localStorage.removeItem('noir_history');
       renderHistory();
-    });
+    }
+  }
+
+  function loadHistoryItem(index) {
+    const history = JSON.parse(localStorage.getItem('noir_history') || '[]');
+    const item = history[index];
+    if (!item) return;
+
+    currentImageUrl = item.url;
+    currentDownloadUrl = item.url;
+    currentFileType = (item.type === 'VIDEO') ? 'mp4' : 'png';
+
+    const preview = document.getElementById('previewBox');
+    if (preview) {
+      const wmDisplay = isProUser ? 'none' : 'block';
+      if (item.type === 'VIDEO') {
+        preview.innerHTML = `
+          <div class="media-wrapper">
+            <video src="${item.url}" autoplay loop muted controls style="width:100%; height:100%; object-fit:contain;"></video>
+            <div id="previewWatermark" class="watermark-overlay" style="display: ${wmDisplay};">NOIR STUDIO</div>
+          </div>
+        `;
+      } else {
+        preview.innerHTML = `
+          <div class="media-wrapper">
+            <img src="${item.url}" alt="Generated Media">
+            <div id="previewWatermark" class="watermark-overlay" style="display: ${wmDisplay};">NOIR STUDIO</div>
+          </div>
+        `;
+      }
+    }
+    const downloadArea = document.getElementById('downloadArea');
+    if (downloadArea) downloadArea.style.display = 'block';
+  }
 </script>
 
 </body>
