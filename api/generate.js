@@ -4,7 +4,7 @@ export default async function handler(req, res) {
     return res.status(500).json({ error: "FAL_KEY가 Vercel 환경 변수에 설정되지 않았습니다." });
   }
 
-  // 1. 상태 확인(GET 요청) 처리 (폴링 용도)
+  // 1. GET 요청 (비디오 생성 큐 상태 폴링 및 결과 조회)
   if (req.method === 'GET') {
     const endpoint = req.query.endpoint;
     if (!endpoint) {
@@ -29,7 +29,7 @@ export default async function handler(req, res) {
     }
   }
 
-  // 2. 이미지/비디오 생성 요청(POST 요청) 처리 -> queue.fal.run을 사용하여 504 타임아웃 방지
+  // 2. POST 요청 (이미지 및 비디오 생성 요청)
   if (req.method === 'POST') {
     try {
       const { endpoint, bodyData } = req.body;
@@ -37,7 +37,11 @@ export default async function handler(req, res) {
         return res.status(400).json({ error: "Endpoint is missing in request body" });
       }
 
-      const response = await fetch(`https://queue.fal.run${endpoint}`, {
+      // 비디오 모델은 504 타임아웃 방지를 위해 queue.fal.run 사용, 이미지는 fal.run 사용
+      const isQueueModel = endpoint.includes('minimax') || endpoint.includes('video');
+      const baseUrl = isQueueModel ? 'https://queue.fal.run' : 'https://fal.run';
+
+      const response = await fetch(`${baseUrl}${endpoint}`, {
         method: 'POST',
         headers: {
           'Authorization': `Key ${FAL_KEY}`,
