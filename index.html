@@ -310,7 +310,7 @@
     .history-item {
       position: relative;
       aspect-ratio: 16/9;
-      background: #000;
+      background: #111;
       border-radius: 8px;
       overflow: hidden;
       border: 1px solid var(--card-border);
@@ -329,6 +329,7 @@
       padding: 2px 6px;
       border-radius: 4px;
       font-weight: bold;
+      z-index: 2;
     }
 
     .footer {
@@ -568,7 +569,7 @@
   let isGenerating = false;
   let activeCost = 0;
   let abortController = null;
-  const activePolls = new Set(); // 중복 폴링 및 크레딧 낭비 방지 셋
+  const activePolls = new Set();
 
   const ADMIN_SECRET_KEY = "noir2026";
   let planClickCount = 0;
@@ -1080,7 +1081,6 @@
   async function updateCloudHistoryStatus(statusUrl, status, value) {
     if (!currentUser || !supabaseClient) return;
     
-    // 이미 완료되었는지 체크하여 중복 알림 방지
     const { data: currentItem } = await supabaseClient
       .from('generation_history')
       .select('status')
@@ -1136,16 +1136,21 @@
       return;
     }
 
+    // ⭐️ 비디오 썸네일 CORS 허용(crossorigin="anonymous") 및 재생 아이콘(▶) 오버레이 적용
     historyContainer.innerHTML = history.map((item) => {
       if (item.status === 'processing') {
         return `<div class="history-item" style="display:flex; align-items:center; justify-content:center; flex-direction:column; background:#12121a; border-color:var(--accent-purple);"><span style="font-size:1.2rem;">⏳</span><span style="font-size:0.65rem; color:#c084fc;">생성 중...</span></div>`;
       } else if (item.status === 'failed') {
         return `<div class="history-item" style="display:flex; align-items:center; justify-content:center; flex-direction:column; background:#1a1212; border-color:#ef4444;"><span style="font-size:1.2rem;">❌</span><span style="font-size:0.65rem; color:#ef4444;">실패</span></div>`;
       } else {
-        // ⭐️ 썸네일 즉시 노출을 위한 #t=0.001 및 preload="metadata" 적용
         const thumbContent = item.type === 'VIDEO' 
-          ? `<video src="${item.url}#t=0.001" muted preload="metadata" playsinline></video>` 
-          : `<img src="${item.url}" alt="history">`;
+          ? `<div style="position:relative; width:100%; height:100%; background:#111;">
+               <video src="${item.url}#t=0.001" muted preload="metadata" playsinline crossorigin="anonymous" style="width:100%; height:100%; object-fit:cover;"></video>
+               <div style="position:absolute; inset:0; display:flex; align-items:center; justify-content:center; background:rgba(0,0,0,0.25); pointer-events:none;">
+                 <span style="font-size:1.2rem; color:#fff; text-shadow:0 2px 4px rgba(0,0,0,0.9); font-weight:bold;">▶</span>
+               </div>
+             </div>` 
+          : `<img src="${item.url}" alt="history" style="width:100%; height:100%; object-fit:cover;">`;
         return `<div class="history-item" onclick="loadHistoryItemFromUrl('${item.url}', '${item.type}')">${thumbContent}<span class="badge-tag">${item.type}</span></div>`;
       }
     }).join('');
@@ -1171,12 +1176,11 @@
     if (preview) {
       const wmDisplay = isProUser ? 'none' : 'block';
       if (type === 'VIDEO') {
-        // ⭐️ 클릭 즉시 빠르게 재생되도록 preload="auto" 설정
-        preview.innerHTML = `<div class="media-wrapper"><video src="${url}" autoplay loop muted controls playsinline preload="auto" style="width:100%; height:100%; object-fit:contain;"></video><div class="watermark-overlay" style="display:${wmDisplay};">NOIR STUDIO</div></div>`;
+        preview.innerHTML = `<div class="media-wrapper"><video src="${url}" autoplay loop muted controls playsinline preload="auto" crossorigin="anonymous" style="width:100%; height:100%; object-fit:contain;"></video><div class="watermark-overlay" style="display:${wmDisplay};">NOIR STUDIO</div></div>`;
         if (vidBtn) vidBtn.disabled = true;
       } else {
         preview.innerHTML = `<div class="media-wrapper"><img src="${url}" alt="Media"><div class="watermark-overlay" style="display:${wmDisplay};">NOIR STUDIO</div></div>`;
-        if (vidBtn) vidBtn.disabled = false; // 이미지 선택 시 비디오 변환 버튼 활성화
+        if (vidBtn) vidBtn.disabled = false;
       }
     }
     document.getElementById('downloadArea').style.display = 'block';
