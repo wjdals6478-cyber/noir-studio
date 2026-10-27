@@ -1112,6 +1112,25 @@
       }
     });
   }
+  async function handleGoogleLogin() {
+  if (!supabaseClient) {
+    alert('Supabase 클라이언트가 초기화되지 않았습니다.');
+    return;
+  }
+
+  const { error } = await supabaseClient.auth.signInWithOAuth({
+    provider: 'google',
+    options: {
+      redirectTo: window.location.origin
+    }
+  });
+
+  if (error) {
+    alert('구글 로그인 오류: ' + error.message);
+  }
+}
+
+
 </script>
 
 </body>
