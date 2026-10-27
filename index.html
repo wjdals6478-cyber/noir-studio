@@ -494,7 +494,7 @@
     </div>
 
     <div class="action-guide" id="actionGuide">
-      ⏱️ <b>소요 안내:</b> 이미지 약 5~10초 / 비디오는 백그라운드 비동기 처리 (자유롭게 다른 작업 가능)<br>
+      ⏱️ <b>소요 안내:</b> 이미지 약 5~10초 / 비디오 3분~5분 (자유롭게 다른 작업 가능)<br>
       🎥 <b>스펙:</b> Flux.1 실사 렌더링 & MiniMax 720p HD 5초 모션 비디오
     </div>
 
@@ -570,7 +570,7 @@
   let activeCost = 0;
   let abortController = null;
   const activePolls = new Set();
-  const completingUrls = new Set(); // ⭐️ 중복 완료 처리 및 다중 알림 방지 락 셋
+  const completingUrls = new Set();
 
   const ADMIN_SECRET_KEY = "noir2026";
   let planClickCount = 0;
@@ -993,7 +993,7 @@
       activeCost = 0;
       await saveToCloudHistory('VIDEO', statusUrl, promptText, 'processing');
       status.innerText = `🚀 백그라운드 작업 등록 완료! (비디오 생성 중...)`;
-      pollVideoInBackground(statusUrl, true); // 사용자가 직접 시작한 작업은 foreground 플래그 전달
+      pollVideoInBackground(statusUrl, true);
 
     } catch (err) {
       isGenerating = false;
@@ -1028,6 +1028,19 @@
         const checkRes = await fetch(`/api/generate?endpoint=${encodeURIComponent(statusUrl)}`, {
           headers: { 'Accept': 'application/json' }
         });
+
+        // ⭐️ 중요: 404나 서버 에러(만료된 요청)일 경우 영원히 멈추지 않던 문제를 해결하기 위해 즉시 failed 처리
+        if (!checkRes.ok) {
+          if (checkRes.status === 404 || checkRes.status >= 500) {
+            clearInterval(checkInterval);
+            activePolls.delete(statusUrl);
+            isGenerating = false;
+            await updateCloudHistoryStatus(statusUrl, 'failed', '요청 만료 또는 서버 오류', isForeground);
+            return;
+          }
+          return; // 일시적 네트워크 오류는 다음 폴링에서 재시도
+        }
+
         const checkData = await checkRes.json();
         const statusUpper = (checkData.status || '').toUpperCase();
 
@@ -1082,9 +1095,8 @@
   async function updateCloudHistoryStatus(statusUrl, status, value, isForeground = false) {
     if (!currentUser || !supabaseClient) return;
 
-    // ⭐️ 중복 완료 처리 및 다중 알림 팝업을 원천 차단하는 가드 락
     if (completingUrls.has(statusUrl)) return;
-    if (status === 'done') {
+    if (status === 'done' || status === 'failed') {
       completingUrls.add(statusUrl);
     }
     
@@ -1095,18 +1107,17 @@
       .eq('url', statusUrl)
       .maybeSingle();
 
-    if (currentItem && currentItem.status === 'done') return;
+    if (currentItem && currentItem.status !== 'processing') return;
 
     await supabaseClient
       .from('generation_history')
-      .update({ status: status, url: value })
+      .update({ status: status, url: (status === 'failed' ? 'https://failed-placeholder' : value) })
       .eq('user_id', currentUser.id)
       .eq('url', statusUrl);
 
     await renderHistory();
 
     if (status === 'done') {
-      // ⭐️ 백그라운드 복원 작업일 경우 화면 강탈 및 자동 재생 방지
       if (isForeground) {
         currentImageUrl = value;
         currentDownloadUrl = value;
@@ -1129,6 +1140,8 @@
       } else {
         document.getElementById('statusText').innerText = `✅ 백그라운드 비디오 변환 완료 (보관함에서 확인하세요)`;
       }
+    } else if (status === 'failed' && isForeground) {
+      document.getElementById('statusText').innerText = `❌ 비디오 변환 실패: ${value}`;
     }
   }
 
@@ -1148,7 +1161,6 @@
       return;
     }
 
-    // ⭐️ 원격 비디오 썸네일 깨짐 방지 및 시네마틱 플레이 버튼 카드 UI 적용
     historyContainer.innerHTML = history.map((item) => {
       if (item.status === 'processing') {
         return `<div class="history-item" style="display:flex; align-items:center; justify-content:center; flex-direction:column; background:#12121a; border-color:var(--accent-purple);"><span style="font-size:1.2rem;">⏳</span><span style="font-size:0.65rem; color:#c084fc;">생성 중...</span></div>`;
@@ -1209,7 +1221,7 @@
       isGenerating = true;
       history.forEach(item => {
         if (item.url && item.url.startsWith('http')) {
-          pollVideoInBackground(item.url, false); // 새로고침 복구 작업은 foreground 알림 플래그 false 전달
+          pollVideoInBackground(item.url, false);
         }
       });
     }
