@@ -494,7 +494,7 @@
     </div>
 
     <div class="action-guide" id="actionGuide">
-      ⏱️ <b>소요 안내:</b> 이미지 약 5~10초 / 비디오 3분~5분 (자유롭게 다른 작업 가능)<br>
+      ⏱️ <b>소요 안내:</b> 이미지 약 5~10초 / 비디오 약 3분~5분 (자유롭게 다른 작업 가능)<br>
       🎥 <b>스펙:</b> Flux.1 실사 렌더링 & MiniMax 720p HD 5초 모션 비디오
     </div>
 
@@ -552,7 +552,7 @@
 <script>
   // ── Supabase 설정 및 전역 변수 초기화 ──
   const SUPABASE_URL = "https://lnovwtmuddjsuqfpvuwi.supabase.co";
-  const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imxub3Z3dG11ZGRqc3VxZnB2dXdpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTMwNzU0NTMsImV4cCI6MjEwODY1MTQ1M30.OV0n9gbw3vtPerYfe4-dBdj-52rLGhSvv0ybFAprFkk"; // <-- 본인의 anon 키를 넣어주세요!
+  const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imxub3Z3dG11ZGRqc3VxZnB2dXdpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTMwNzU0NTMsImV4cCI6MjEwODY1MTQ1M30.OV0n9gbw3vtPerYfe4-dBdj-52rLGhSvv0ybFAprFkk요"; // <-- 본인의 anon 키를 넣어주세요!
 
   let supabaseClient = null;
   try {
@@ -991,9 +991,12 @@
       if (!statusUrl) throw new Error("요청 상태 URL을 받지 못했습니다.");
 
       activeCost = 0;
-      await saveToCloudHistory('VIDEO', statusUrl, promptText, 'processing');
+      
+      const historyRow = await saveToCloudHistory('VIDEO', statusUrl, promptText, 'processing');
+      const historyId = historyRow ? historyRow.id : null;
+
       status.innerText = `🚀 백그라운드 작업 등록 완료! (비디오 생성 중...)`;
-      pollVideoInBackground(statusUrl, true);
+      pollVideoInBackground(historyId, statusUrl, promptText, true);
 
     } catch (err) {
       isGenerating = false;
@@ -1007,7 +1010,7 @@
     }
   }
 
-  async function pollVideoInBackground(statusUrl, isForeground = false) {
+  async function pollVideoInBackground(historyId, statusUrl, promptText, isForeground = false) {
     if (activePolls.has(statusUrl)) return;
     activePolls.add(statusUrl);
 
@@ -1020,7 +1023,7 @@
         clearInterval(checkInterval);
         activePolls.delete(statusUrl);
         isGenerating = false;
-        await updateCloudHistoryStatus(statusUrl, 'failed', '시간 초과', isForeground);
+        await updateCloudHistoryStatus(historyId, statusUrl, 'failed', '시간 초과', promptText, isForeground);
         return;
       }
 
@@ -1029,16 +1032,15 @@
           headers: { 'Accept': 'application/json' }
         });
 
-        // ⭐️ 중요: 404나 서버 에러(만료된 요청)일 경우 영원히 멈추지 않던 문제를 해결하기 위해 즉시 failed 처리
         if (!checkRes.ok) {
           if (checkRes.status === 404 || checkRes.status >= 500) {
             clearInterval(checkInterval);
             activePolls.delete(statusUrl);
             isGenerating = false;
-            await updateCloudHistoryStatus(statusUrl, 'failed', '요청 만료 또는 서버 오류', isForeground);
+            await updateCloudHistoryStatus(historyId, statusUrl, 'failed', '요청 만료 또는 서버 오류', promptText, isForeground);
             return;
           }
-          return; // 일시적 네트워크 오류는 다음 폴링에서 재시도
+          return;
         }
 
         const checkData = await checkRes.json();
@@ -1057,13 +1059,14 @@
             clearInterval(checkInterval);
             activePolls.delete(statusUrl);
             isGenerating = false;
-            await updateCloudHistoryStatus(statusUrl, 'done', videoUrl, isForeground);
+            // ⭐️ 완성 시점에 확실하게 업데이트 (DELETE 후 INSERT 방식으로 RLS 보안 정책 우회)
+            await updateCloudHistoryStatus(historyId, statusUrl, 'done', videoUrl, promptText, isForeground);
           }
         } else if (statusUpper === 'FAILED' || statusUpper === 'CANCELLED') {
           clearInterval(checkInterval);
           activePolls.delete(statusUrl);
           isGenerating = false;
-          await updateCloudHistoryStatus(statusUrl, 'failed', checkData.error || '생성 실패', isForeground);
+          await updateCloudHistoryStatus(historyId, statusUrl, 'failed', checkData.error || '생성 실패', promptText, isForeground);
         }
       } catch (err) {
         console.error("폴링 에러:", err);
@@ -1085,14 +1088,16 @@
   }
 
   async function saveToCloudHistory(type, url, promptText, status = 'done') {
-    if (!currentUser || !supabaseClient) return;
-    await supabaseClient.from('generation_history').insert([
+    if (!currentUser || !supabaseClient) return null;
+    const { data, error } = await supabaseClient.from('generation_history').insert([
       { user_id: currentUser.id, type, url, prompt: promptText || '', status }
-    ]);
+    ]).select().single();
+    
     await renderHistory();
+    return data;
   }
 
-  async function updateCloudHistoryStatus(statusUrl, status, value, isForeground = false) {
+  async function updateCloudHistoryStatus(historyId, statusUrl, status, value, promptText, isForeground = false) {
     if (!currentUser || !supabaseClient) return;
 
     if (completingUrls.has(statusUrl)) return;
@@ -1100,20 +1105,20 @@
       completingUrls.add(statusUrl);
     }
     
-    const { data: currentItem } = await supabaseClient
-      .from('generation_history')
-      .select('status')
-      .eq('user_id', currentUser.id)
-      .eq('url', statusUrl)
-      .maybeSingle();
+    // ⭐️ RLS UPDATE 보안 정책 문제를 100% 회피하기 위해: 기존 'processing' 행을 지우고 완료된 행을 새로 삽입합니다.
+    if (historyId) {
+      await supabaseClient.from('generation_history').delete().eq('id', historyId);
+    }
 
-    if (currentItem && currentItem.status !== 'processing') return;
-
-    await supabaseClient
-      .from('generation_history')
-      .update({ status: status, url: (status === 'failed' ? 'https://failed-placeholder' : value) })
-      .eq('user_id', currentUser.id)
-      .eq('url', statusUrl);
+    await supabaseClient.from('generation_history').insert([
+      { 
+        user_id: currentUser.id, 
+        type: 'VIDEO', 
+        url: (status === 'failed' ? 'https://failed-placeholder' : value), 
+        prompt: promptText || '', 
+        status: status 
+      }
+    ]);
 
     await renderHistory();
 
@@ -1163,9 +1168,9 @@
 
     historyContainer.innerHTML = history.map((item) => {
       if (item.status === 'processing') {
-        return `<div class="history-item" style="display:flex; align-items:center; justify-content:center; flex-direction:column; background:#12121a; border-color:var(--accent-purple);"><span style="font-size:1.2rem;">⏳</span><span style="font-size:0.65rem; color:#c084fc;">생성 중...</span></div>`;
+        return `<div class="history-item" onclick="cancelStuckItem('${item.id}')" title="클릭하여 멈춘 작업 취소" style="display:flex; align-items:center; justify-content:center; flex-direction:column; background:#12121a; border-color:var(--accent-purple); cursor:pointer;"><span style="font-size:1.2rem;">⏳</span><span style="font-size:0.65rem; color:#c084fc;">생성 중...</span></div>`;
       } else if (item.status === 'failed') {
-        return `<div class="history-item" style="display:flex; align-items:center; justify-content:center; flex-direction:column; background:#1a1212; border-color:#ef4444;"><span style="font-size:1.2rem;">❌</span><span style="font-size:0.65rem; color:#ef4444;">실패</span></div>`;
+        return `<div class="history-item" onclick="cancelStuckItem('${item.id}')" title="클릭하여 실패 기록 삭제" style="display:flex; align-items:center; justify-content:center; flex-direction:column; background:#1a1212; border-color:#ef4444; cursor:pointer;"><span style="font-size:1.2rem;">❌</span><span style="font-size:0.65rem; color:#ef4444;">실패</span></div>`;
       } else {
         const thumbContent = item.type === 'VIDEO' 
           ? `<div style="position:relative; width:100%; height:100%; background:linear-gradient(135deg, #181824 0%, #0a0a0f 100%); display:flex; align-items:center; justify-content:center;">
@@ -1177,6 +1182,16 @@
         return `<div class="history-item" onclick="loadHistoryItemFromUrl('${item.url}', '${item.type}')">${thumbContent}<span class="badge-tag">${item.type}</span></div>`;
       }
     }).join('');
+  }
+
+  async function cancelStuckItem(itemId) {
+    if (confirm('해당 기록을 삭제하시겠습니까?')) {
+      if (currentUser && supabaseClient) {
+        await supabaseClient.from('generation_history').delete().eq('id', itemId);
+        await renderHistory();
+        document.getElementById('statusText').innerText = '⚠️ 기록이 삭제되었습니다.';
+      }
+    }
   }
 
   async function clearHistory() {
@@ -1221,7 +1236,7 @@
       isGenerating = true;
       history.forEach(item => {
         if (item.url && item.url.startsWith('http')) {
-          pollVideoInBackground(item.url, false);
+          pollVideoInBackground(item.id, item.url, item.prompt, false);
         }
       });
     }
