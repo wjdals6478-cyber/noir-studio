@@ -310,7 +310,7 @@
     .history-item {
       position: relative;
       aspect-ratio: 16/9;
-      background: #111;
+      background: #0f0f14;
       border-radius: 8px;
       overflow: hidden;
       border: 1px solid var(--card-border);
@@ -318,7 +318,7 @@
       transition: transform 0.2s;
     }
     .history-item:hover { transform: scale(1.03); border-color: var(--accent-purple); }
-    .history-item img, .history-item video { width: 100%; height: 100%; object-fit: cover; }
+    .history-item img { width: 100%; height: 100%; object-fit: cover; }
     .badge-tag {
       position: absolute;
       top: 4px;
@@ -494,7 +494,7 @@
     </div>
 
     <div class="action-guide" id="actionGuide">
-      ⏱️ <b>소요 안내:</b> 이미지 약 5~10초 / 비디오 3분~5분 (자유롭게 다른 작업 가능)<br>
+      ⏱️ <b>소요 안내:</b> 이미지 약 5~10초 / 비디오는 백그라운드 비동기 처리 (자유롭게 다른 작업 가능)<br>
       🎥 <b>스펙:</b> Flux.1 실사 렌더링 & MiniMax 720p HD 5초 모션 비디오
     </div>
 
@@ -570,6 +570,7 @@
   let activeCost = 0;
   let abortController = null;
   const activePolls = new Set();
+  const completingUrls = new Set(); // ⭐️ 중복 완료 처리 및 다중 알림 방지 락 셋
 
   const ADMIN_SECRET_KEY = "noir2026";
   let planClickCount = 0;
@@ -992,7 +993,7 @@
       activeCost = 0;
       await saveToCloudHistory('VIDEO', statusUrl, promptText, 'processing');
       status.innerText = `🚀 백그라운드 작업 등록 완료! (비디오 생성 중...)`;
-      pollVideoInBackground(statusUrl);
+      pollVideoInBackground(statusUrl, true); // 사용자가 직접 시작한 작업은 foreground 플래그 전달
 
     } catch (err) {
       isGenerating = false;
@@ -1006,7 +1007,7 @@
     }
   }
 
-  async function pollVideoInBackground(statusUrl) {
+  async function pollVideoInBackground(statusUrl, isForeground = false) {
     if (activePolls.has(statusUrl)) return;
     activePolls.add(statusUrl);
 
@@ -1019,7 +1020,7 @@
         clearInterval(checkInterval);
         activePolls.delete(statusUrl);
         isGenerating = false;
-        await updateCloudHistoryStatus(statusUrl, 'failed', '시간 초과');
+        await updateCloudHistoryStatus(statusUrl, 'failed', '시간 초과', isForeground);
         return;
       }
 
@@ -1043,13 +1044,13 @@
             clearInterval(checkInterval);
             activePolls.delete(statusUrl);
             isGenerating = false;
-            await updateCloudHistoryStatus(statusUrl, 'done', videoUrl);
+            await updateCloudHistoryStatus(statusUrl, 'done', videoUrl, isForeground);
           }
         } else if (statusUpper === 'FAILED' || statusUpper === 'CANCELLED') {
           clearInterval(checkInterval);
           activePolls.delete(statusUrl);
           isGenerating = false;
-          await updateCloudHistoryStatus(statusUrl, 'failed', checkData.error || '생성 실패');
+          await updateCloudHistoryStatus(statusUrl, 'failed', checkData.error || '생성 실패', isForeground);
         }
       } catch (err) {
         console.error("폴링 에러:", err);
@@ -1078,8 +1079,14 @@
     await renderHistory();
   }
 
-  async function updateCloudHistoryStatus(statusUrl, status, value) {
+  async function updateCloudHistoryStatus(statusUrl, status, value, isForeground = false) {
     if (!currentUser || !supabaseClient) return;
+
+    // ⭐️ 중복 완료 처리 및 다중 알림 팝업을 원천 차단하는 가드 락
+    if (completingUrls.has(statusUrl)) return;
+    if (status === 'done') {
+      completingUrls.add(statusUrl);
+    }
     
     const { data: currentItem } = await supabaseClient
       .from('generation_history')
@@ -1099,24 +1106,29 @@
     await renderHistory();
 
     if (status === 'done') {
-      currentImageUrl = value;
-      currentDownloadUrl = value;
-      currentFileType = 'mp4';
+      // ⭐️ 백그라운드 복원 작업일 경우 화면 강탈 및 자동 재생 방지
+      if (isForeground) {
+        currentImageUrl = value;
+        currentDownloadUrl = value;
+        currentFileType = 'mp4';
 
-      const preview = document.getElementById('previewBox');
-      if (preview) {
-        const wmDisplay = isProUser ? 'none' : 'block';
-        preview.innerHTML = `
-          <div class="media-wrapper">
-            <video src="${value}" autoplay loop muted controls playsinline preload="auto" style="width:100%; height:100%; object-fit:contain;"></video>
-            <div class="watermark-overlay" style="display: ${wmDisplay};">NOIR STUDIO</div>
-          </div>
-        `;
+        const preview = document.getElementById('previewBox');
+        if (preview) {
+          const wmDisplay = isProUser ? 'none' : 'block';
+          preview.innerHTML = `
+            <div class="media-wrapper">
+              <video src="${value}" autoplay loop muted controls playsinline preload="auto" crossorigin="anonymous" style="width:100%; height:100%; object-fit:contain;"></video>
+              <div class="watermark-overlay" style="display: ${wmDisplay};">NOIR STUDIO</div>
+            </div>
+          `;
+        }
+        
+        document.getElementById('downloadArea').style.display = 'block';
+        document.getElementById('statusText').innerText = '✅ 비디오 변환 완료!';
+        alert(`✨ [비디오 완성] 동영상 변환이 완료되었습니다!`);
+      } else {
+        document.getElementById('statusText').innerText = `✅ 백그라운드 비디오 변환 완료 (보관함에서 확인하세요)`;
       }
-      
-      document.getElementById('downloadArea').style.display = 'block';
-      document.getElementById('statusText').innerText = '✅ 비디오 변환 완료!';
-      alert(`✨ [비디오 완성] 동영상 변환이 완료되었습니다!`);
     }
   }
 
@@ -1136,7 +1148,7 @@
       return;
     }
 
-    // ⭐️ 비디오 썸네일 CORS 허용(crossorigin="anonymous") 및 재생 아이콘(▶) 오버레이 적용
+    // ⭐️ 원격 비디오 썸네일 깨짐 방지 및 시네마틱 플레이 버튼 카드 UI 적용
     historyContainer.innerHTML = history.map((item) => {
       if (item.status === 'processing') {
         return `<div class="history-item" style="display:flex; align-items:center; justify-content:center; flex-direction:column; background:#12121a; border-color:var(--accent-purple);"><span style="font-size:1.2rem;">⏳</span><span style="font-size:0.65rem; color:#c084fc;">생성 중...</span></div>`;
@@ -1144,13 +1156,12 @@
         return `<div class="history-item" style="display:flex; align-items:center; justify-content:center; flex-direction:column; background:#1a1212; border-color:#ef4444;"><span style="font-size:1.2rem;">❌</span><span style="font-size:0.65rem; color:#ef4444;">실패</span></div>`;
       } else {
         const thumbContent = item.type === 'VIDEO' 
-          ? `<div style="position:relative; width:100%; height:100%; background:#111;">
-               <video src="${item.url}#t=0.001" muted preload="metadata" playsinline crossorigin="anonymous" style="width:100%; height:100%; object-fit:cover;"></video>
-               <div style="position:absolute; inset:0; display:flex; align-items:center; justify-content:center; background:rgba(0,0,0,0.25); pointer-events:none;">
-                 <span style="font-size:1.2rem; color:#fff; text-shadow:0 2px 4px rgba(0,0,0,0.9); font-weight:bold;">▶</span>
+          ? `<div style="position:relative; width:100%; height:100%; background:linear-gradient(135deg, #181824 0%, #0a0a0f 100%); display:flex; align-items:center; justify-content:center;">
+               <div style="width:36px; height:36px; border-radius:50%; background:rgba(157,78,221,0.8); display:flex; align-items:center; justify-content:center; box-shadow:0 0 12px rgba(157,78,221,0.5);">
+                 <span style="font-size:0.9rem; color:#fff; font-weight:bold; margin-left:2px;">▶</span>
                </div>
              </div>` 
-          : `<img src="${item.url}" alt="history" style="width:100%; height:100%; object-fit:cover;">`;
+          : `<img src="${item.url}" alt="history">`;
         return `<div class="history-item" onclick="loadHistoryItemFromUrl('${item.url}', '${item.type}')">${thumbContent}<span class="badge-tag">${item.type}</span></div>`;
       }
     }).join('');
@@ -1198,7 +1209,7 @@
       isGenerating = true;
       history.forEach(item => {
         if (item.url && item.url.startsWith('http')) {
-          pollVideoInBackground(item.url);
+          pollVideoInBackground(item.url, false); // 새로고침 복구 작업은 foreground 알림 플래그 false 전달
         }
       });
     }
