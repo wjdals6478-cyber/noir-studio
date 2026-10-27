@@ -610,14 +610,14 @@
     }
   };
 
-  // 서버에서 유저 프로필(크레딧, 프로 여부) 불러오기
+  // 서버에서 유저 프로필(크레딧, 프로 여부) 불러오기 (⭐️ 406 에러 방지를 위해 .single()을 .maybeSingle()로 변경)
   async function fetchUserProfile() {
     if (!currentUser || !supabaseClient) return;
     const { data, error } = await supabaseClient
       .from('profiles')
       .select('credits, is_pro')
       .eq('id', currentUser.id)
-      .single();
+      .maybeSingle();
 
     if (data) {
       credits = data.credits;
@@ -1152,12 +1152,16 @@
     currentFileType = (type === 'VIDEO') ? 'mp4' : 'png';
 
     const preview = document.getElementById('previewBox');
+    const vidBtn = document.getElementById('vidBtn');
+
     if (preview) {
       const wmDisplay = isProUser ? 'none' : 'block';
       if (type === 'VIDEO') {
         preview.innerHTML = `<div class="media-wrapper"><video src="${url}" autoplay loop muted controls style="width:100%; height:100%; object-fit:contain;"></video><div class="watermark-overlay" style="display:${wmDisplay};">NOIR STUDIO</div></div>`;
+        if (vidBtn) vidBtn.disabled = true;
       } else {
         preview.innerHTML = `<div class="media-wrapper"><img src="${url}" alt="Media"><div class="watermark-overlay" style="display:${wmDisplay};">NOIR STUDIO</div></div>`;
+        if (vidBtn) vidBtn.disabled = false; // ⭐️ 이미지 선택 시 비디오 변환 버튼 활성화
       }
     }
     document.getElementById('downloadArea').style.display = 'block';
