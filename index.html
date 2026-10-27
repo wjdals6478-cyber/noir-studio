@@ -551,7 +551,7 @@
 <script>
   // ── Supabase 설정 및 전역 변수 초기화 ──
   const SUPABASE_URL = "https://lnovwtmuddjsuqfpvuwi.supabase.co";
-  const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imxub3Z3dG11ZGRqc3VxZnB2dXdpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTMwNzU0NTMsImV4cCI6MjEwODY1MTQ1M30.OV0n9gbw3vtPerYfe4-dBdj-52rLGhSvv0ybFAprFkk"; // <-- 본인의 anon 키를 큰 따옴표 사이에 넣어주세요!
+  const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imxub3Z3dG11ZGRqc3VxZnB2dXdpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTMwNzU0NTMsImV4cCI6MjEwODY1MTQ1M30.OV0n9gbw3vtPerYfe4-dBdj-52rLGhSvv0ybFAprFkk"; // <-- 본인의 anon 키를 넣어주세요!
 
   let supabaseClient = null;
   try {
@@ -1064,14 +1064,38 @@
 
   async function updateCloudHistoryStatus(statusUrl, status, value) {
     if (!currentUser || !supabaseClient) return;
+    
+    // 1. Supabase 히스토리 테이블 업데이트
     await supabaseClient
       .from('generation_history')
       .update({ status: status, url: value })
       .eq('user_id', currentUser.id)
       .eq('url', statusUrl);
 
+    // 2. 히스토리 리스트 다시 그리기
     await renderHistory();
-    if (status === 'done') alert(`✨ [비디오 완성] 동영상 변환이 완료되었습니다!`);
+
+    // 3. ⭐️ 생성 완료(done) 상태일 때 미리보기 화면에 즉시 반영
+    if (status === 'done') {
+      currentImageUrl = value;
+      currentDownloadUrl = value;
+      currentFileType = 'mp4';
+
+      const preview = document.getElementById('previewBox');
+      if (preview) {
+        const wmDisplay = isProUser ? 'none' : 'block';
+        preview.innerHTML = `
+          <div class="media-wrapper">
+            <video src="${value}" autoplay loop muted controls style="width:100%; height:100%; object-fit:contain;"></video>
+            <div class="watermark-overlay" style="display: ${wmDisplay};">NOIR STUDIO</div>
+          </div>
+        `;
+      }
+      
+      document.getElementById('downloadArea').style.display = 'block';
+      document.getElementById('statusText').innerText = '✅ 비디오 변환 완료!';
+      alert(`✨ [비디오 완성] 동영상 변환이 완료되었습니다!`);
+    }
   }
 
   async function renderHistory() {
