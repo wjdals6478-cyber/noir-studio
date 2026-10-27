@@ -573,24 +573,17 @@
   let planClickCount = 0;
   let planClickTimer = null;
 
-  // 페이지 로드 시 실행
+  // 페이지 로드 시 실행 (OAuth 타이밍 충돌 방지 로직 적용)
   window.onload = async () => {
     if (supabaseClient) {
-      const { data: { session } } = await supabaseClient.auth.getSession();
-      if (!session) {
-        document.getElementById('authOverlay').style.display = 'flex';
-      } else {
-        currentUser = session.user;
-        document.getElementById('authOverlay').style.display = 'none';
-        await fetchUserProfile();
-        await renderHistory();
-        resumePendingPolls();
-      }
-
+      // 1. 인증 상태 변화 리스너 등록
       supabaseClient.auth.onAuthStateChange(async (event, session) => {
         if (!session) {
           currentUser = null;
-          document.getElementById('authOverlay').style.display = 'flex';
+          const hasOAuthParams = window.location.search.includes('code=') || window.location.hash.includes('access_token=');
+          if (!hasOAuthParams) {
+            document.getElementById('authOverlay').style.display = 'flex';
+          }
         } else {
           currentUser = session.user;
           document.getElementById('authOverlay').style.display = 'none';
@@ -599,6 +592,21 @@
           resumePendingPolls();
         }
       });
+
+      // 2. 초기 세션 확인
+      const { data: { session } } = await supabaseClient.auth.getSession();
+      if (session) {
+        currentUser = session.user;
+        document.getElementById('authOverlay').style.display = 'none';
+        await fetchUserProfile();
+        await renderHistory();
+        resumePendingPolls();
+      } else {
+        const hasOAuthParams = window.location.search.includes('code=') || window.location.hash.includes('access_token=');
+        if (!hasOAuthParams) {
+          document.getElementById('authOverlay').style.display = 'flex';
+        }
+      }
     }
   };
 
