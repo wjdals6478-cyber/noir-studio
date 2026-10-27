@@ -45,7 +45,8 @@ export default async function handler(req, res) {
         method: 'POST',
         headers: {
           'Authorization': `Key ${FAL_KEY}`,
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
+          'Accept': 'application/json' // ⭐️ 406 오류 방지를 위해 Accept 헤더 추가 완료!
         },
         body: JSON.stringify(bodyData || {})
       });
