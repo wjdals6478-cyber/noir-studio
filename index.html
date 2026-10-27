@@ -956,6 +956,9 @@
       activeCost = 0;
     }
 
+    // ⭐️ 비디오 생성 시작 시 작업 중 상태로 설정 (새 작업 방지)
+    isGenerating = true;
+
     const promptText = document.getElementById('prompt').value.trim() || "Cinematic motion, high quality";
     const status = document.getElementById('statusText');
     status.innerText = '🎬 비디오 생성 작업이 백그라운드에 등록 중입니다...';
@@ -987,7 +990,7 @@
 
       activeCost = 0;
       await saveToCloudHistory('VIDEO', statusUrl, promptText, 'processing');
-      status.innerText = `🚀 백그라운드 작업 등록 완료!`;
+      status.innerText = `🚀 백그라운드 작업 등록 완료! (비디오 생성 중...)`;
       pollVideoInBackground(statusUrl);
 
     } catch (err) {
@@ -1010,6 +1013,7 @@
     const checkInterval = setInterval(async () => {
       if (Date.now() - startTime > MAX_TIME) {
         clearInterval(checkInterval);
+        isGenerating = false; // ⭐️ 시간 초과 시 잠금 해제
         await updateCloudHistoryStatus(statusUrl, 'failed', '시간 초과');
         return;
       }
@@ -1028,10 +1032,12 @@
 
           if (videoUrl) {
             clearInterval(checkInterval);
+            isGenerating = false; // ⭐️ 비디오 완성 시 잠금 해제
             await updateCloudHistoryStatus(statusUrl, 'done', videoUrl);
           }
         } else if (statusUpper === 'FAILED' || statusUpper === 'CANCELLED') {
           clearInterval(checkInterval);
+          isGenerating = false; // ⭐️ 실패 시 잠금 해제
           await updateCloudHistoryStatus(statusUrl, 'failed', checkData.error || '생성 실패');
         }
       } catch (err) {
@@ -1159,7 +1165,8 @@
       .eq('user_id', currentUser.id)
       .eq('status', 'processing');
 
-    if (history) {
+    if (history && history.length > 0) {
+      isGenerating = true; // ⭐️ 대기 중인 작업이 있으면 잠금 유지
       history.forEach(item => {
         if (item.url && item.url.startsWith('http')) {
           pollVideoInBackground(item.url);
