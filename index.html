@@ -880,7 +880,10 @@
     try {
       const response = await fetch('/api/generate', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
+        },
         body: JSON.stringify({
           endpoint: '/fal-ai/flux/dev',
           bodyData: {
@@ -956,7 +959,6 @@
       activeCost = 0;
     }
 
-    // ⭐️ 비디오 생성 시작 시 작업 중 상태로 설정 (새 작업 방지)
     isGenerating = true;
 
     const promptText = document.getElementById('prompt').value.trim() || "Cinematic motion, high quality";
@@ -966,7 +968,10 @@
     try {
       const response = await fetch('/api/generate', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
+        },
         body: JSON.stringify({
           endpoint: '/fal-ai/minimax/video-01',
           bodyData: {
@@ -1013,31 +1018,35 @@
     const checkInterval = setInterval(async () => {
       if (Date.now() - startTime > MAX_TIME) {
         clearInterval(checkInterval);
-        isGenerating = false; // ⭐️ 시간 초과 시 잠금 해제
+        isGenerating = false;
         await updateCloudHistoryStatus(statusUrl, 'failed', '시간 초과');
         return;
       }
 
       try {
-        const checkRes = await fetch(`/api/generate?endpoint=${encodeURIComponent(statusUrl)}`);
+        const checkRes = await fetch(`/api/generate?endpoint=${encodeURIComponent(statusUrl)}`, {
+          headers: { 'Accept': 'application/json' }
+        });
         const checkData = await checkRes.json();
         const statusUpper = (checkData.status || '').toUpperCase();
 
         if (statusUpper === 'COMPLETED') {
           let resultUrl = statusUrl.endsWith('/status') ? statusUrl.replace(/\/status$/, '') : statusUrl;
-          const resultRes = await fetch(`/api/generate?endpoint=${encodeURIComponent(resultUrl)}`);
+          const resultRes = await fetch(`/api/generate?endpoint=${encodeURIComponent(resultUrl)}`, {
+            headers: { 'Accept': 'application/json' }
+          });
           const finalData = await resultRes.json();
 
           let videoUrl = finalData.video?.url || finalData.output?.video?.url || finalData.url || extractAnyUrl(finalData);
 
           if (videoUrl) {
             clearInterval(checkInterval);
-            isGenerating = false; // ⭐️ 비디오 완성 시 잠금 해제
+            isGenerating = false;
             await updateCloudHistoryStatus(statusUrl, 'done', videoUrl);
           }
         } else if (statusUpper === 'FAILED' || statusUpper === 'CANCELLED') {
           clearInterval(checkInterval);
-          isGenerating = false; // ⭐️ 실패 시 잠금 해제
+          isGenerating = false;
           await updateCloudHistoryStatus(statusUrl, 'failed', checkData.error || '생성 실패');
         }
       } catch (err) {
@@ -1071,17 +1080,14 @@
   async function updateCloudHistoryStatus(statusUrl, status, value) {
     if (!currentUser || !supabaseClient) return;
     
-    // 1. Supabase 히스토리 테이블 업데이트
     await supabaseClient
       .from('generation_history')
       .update({ status: status, url: value })
       .eq('user_id', currentUser.id)
       .eq('url', statusUrl);
 
-    // 2. 히스토리 리스트 다시 그리기
     await renderHistory();
 
-    // 3. ⭐️ 생성 완료(done) 상태일 때 미리보기 화면에 즉시 반영
     if (status === 'done') {
       currentImageUrl = value;
       currentDownloadUrl = value;
@@ -1166,7 +1172,7 @@
       .eq('status', 'processing');
 
     if (history && history.length > 0) {
-      isGenerating = true; // ⭐️ 대기 중인 작업이 있으면 잠금 유지
+      isGenerating = true;
       history.forEach(item => {
         if (item.url && item.url.startsWith('http')) {
           pollVideoInBackground(item.url);
