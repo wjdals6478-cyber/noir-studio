@@ -568,16 +568,14 @@
   let isGenerating = false;
   let activeCost = 0;
   let abortController = null;
-  const activePolls = new Set(); // ⭐️ 중복 폴링 및 중복 알림 방지 셋
+  const activePolls = new Set(); // 중복 폴링 및 크레딧 낭비 방지 셋
 
   const ADMIN_SECRET_KEY = "noir2026";
   let planClickCount = 0;
   let planClickTimer = null;
 
-  // 페이지 로드 시 실행 (OAuth 타이밍 충돌 방지 로직 적용)
   window.onload = async () => {
     if (supabaseClient) {
-      // 1. 인증 상태 변화 리스너 등록
       supabaseClient.auth.onAuthStateChange(async (event, session) => {
         if (!session) {
           currentUser = null;
@@ -594,7 +592,6 @@
         }
       });
 
-      // 2. 초기 세션 확인
       const { data: { session } } = await supabaseClient.auth.getSession();
       if (session) {
         currentUser = session.user;
@@ -611,7 +608,6 @@
     }
   };
 
-  // 서버에서 유저 프로필(크레딧, 프로 여부) 불러오기
   async function fetchUserProfile() {
     if (!currentUser || !supabaseClient) return;
     const { data, error } = await supabaseClient
@@ -628,7 +624,6 @@
     }
   }
 
-  // 서버에 크레딧 업데이트 반영
   async function updateServerCredits(newCredits) {
     if (!currentUser || !supabaseClient || isProUser) return;
     credits = newCredits;
@@ -1011,7 +1006,6 @@
   }
 
   async function pollVideoInBackground(statusUrl) {
-    // ⭐️ 이미 폴링 중인 URL이면 중복 실행 차단
     if (activePolls.has(statusUrl)) return;
     activePolls.add(statusUrl);
 
@@ -1046,7 +1040,7 @@
 
           if (videoUrl) {
             clearInterval(checkInterval);
-            activePolls.delete(statusUrl); // ⭐️ 폴링 완료 후 세트에서 제거
+            activePolls.delete(statusUrl);
             isGenerating = false;
             await updateCloudHistoryStatus(statusUrl, 'done', videoUrl);
           }
@@ -1086,7 +1080,16 @@
   async function updateCloudHistoryStatus(statusUrl, status, value) {
     if (!currentUser || !supabaseClient) return;
     
-    // DB 업데이트
+    // 이미 완료되었는지 체크하여 중복 알림 방지
+    const { data: currentItem } = await supabaseClient
+      .from('generation_history')
+      .select('status')
+      .eq('user_id', currentUser.id)
+      .eq('url', statusUrl)
+      .maybeSingle();
+
+    if (currentItem && currentItem.status === 'done') return;
+
     await supabaseClient
       .from('generation_history')
       .update({ status: status, url: value })
@@ -1103,7 +1106,6 @@
       const preview = document.getElementById('previewBox');
       if (preview) {
         const wmDisplay = isProUser ? 'none' : 'block';
-        // ⭐️ 즉시 재생 및 빠른 로딩을 위해 preload="auto" 적용
         preview.innerHTML = `
           <div class="media-wrapper">
             <video src="${value}" autoplay loop muted controls playsinline preload="auto" style="width:100%; height:100%; object-fit:contain;"></video>
@@ -1140,7 +1142,7 @@
       } else if (item.status === 'failed') {
         return `<div class="history-item" style="display:flex; align-items:center; justify-content:center; flex-direction:column; background:#1a1212; border-color:#ef4444;"><span style="font-size:1.2rem;">❌</span><span style="font-size:0.65rem; color:#ef4444;">실패</span></div>`;
       } else {
-        // ⭐️ 비디오 썸네일 즉시 표시를 위해 #t=0.001 및 preload="metadata" 추가
+        // ⭐️ 썸네일 즉시 노출을 위한 #t=0.001 및 preload="metadata" 적용
         const thumbContent = item.type === 'VIDEO' 
           ? `<video src="${item.url}#t=0.001" muted preload="metadata" playsinline></video>` 
           : `<img src="${item.url}" alt="history">`;
@@ -1169,12 +1171,12 @@
     if (preview) {
       const wmDisplay = isProUser ? 'none' : 'block';
       if (type === 'VIDEO') {
-        // ⭐️ 클릭 시 바로바로 빠르게 뜨도록 preload="auto" 설정
+        // ⭐️ 클릭 즉시 빠르게 재생되도록 preload="auto" 설정
         preview.innerHTML = `<div class="media-wrapper"><video src="${url}" autoplay loop muted controls playsinline preload="auto" style="width:100%; height:100%; object-fit:contain;"></video><div class="watermark-overlay" style="display:${wmDisplay};">NOIR STUDIO</div></div>`;
         if (vidBtn) vidBtn.disabled = true;
       } else {
         preview.innerHTML = `<div class="media-wrapper"><img src="${url}" alt="Media"><div class="watermark-overlay" style="display:${wmDisplay};">NOIR STUDIO</div></div>`;
-        if (vidBtn) vidBtn.disabled = false;
+        if (vidBtn) vidBtn.disabled = false; // 이미지 선택 시 비디오 변환 버튼 활성화
       }
     }
     document.getElementById('downloadArea').style.display = 'block';
