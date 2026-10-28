@@ -8,8 +8,8 @@
   <script defer src="/_vercel/insights/script.js"></script>
   <!-- Supabase JS SDK CDN -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <!-- 토스페이먼츠 결제 SDK -->
-  <script src="https://js.tosspayments.com/v1/payment"></script>
+  <!-- 토스페이먼츠 결제위젯 SDK -->
+  <script src="https://js.tosspayments.com/v1/payment-widget"></script>
 
   <meta name="description" content="NOIR STUDIO - 초고화질 AI 실사 이미지 및 시네마틱 모션 비디오 생성기">
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700;800&display=swap" rel="stylesheet">
@@ -500,8 +500,8 @@
   </div>
 </div>
 
-<!-- 모달창 (3단 크레딧 충전 팩 - 이벤트 전파 방지 적용) -->
-<div class="modal-backdrop" id="pricingModal">
+<!-- 모달창 (3단 크레딧 충전 팩 - 최신 토스페이먼츠 결제위젯 적용) -->
+<div class="modal-backdrop" id="pricingModal" onclick="closeModal()">
   <div class="modal-card" onclick="event.stopPropagation()">
     <button class="close-btn" onclick="closeModal()">&times;</button>
     
@@ -527,7 +527,7 @@
             <div style="color: #71717a;">· 일반 생성 속도</div>
           </div>
         </div>
-        <button type="button" class="btn" style="background: #27273a; color: #fff; margin-top: 24px; width: 100%;" onclick="requestTossPayment('스타터 팩', 3900, 300)">충전하기</button>
+        <button type="button" class="btn" style="background: #27273a; color: #fff; margin-top: 24px; width: 100%; cursor: pointer;" onclick="requestTossPayment('스타터 팩', 3900, 300)">충전하기</button>
       </div>
 
       <!-- 2. 크리에이터 팩 -->
@@ -546,7 +546,7 @@
             <div style="color: #a78bfa; font-weight: bold;">🚀 초고속 우선순위 렌더링 배정</div>
           </div>
         </div>
-        <button type="button" class="btn btn-secondary" style="margin-top: 24px; width: 100%;" onclick="requestTossPayment('크리에이터 팩', 9900, 1000)">충전하기</button>
+        <button type="button" class="btn btn-secondary" style="margin-top: 24px; width: 100%; cursor: pointer;" onclick="requestTossPayment('크리에이터 팩', 9900, 1000)">충전하기</button>
       </div>
 
       <!-- 3. 프로 팩 (35% 할인특가) -->
@@ -568,7 +568,7 @@
             <div style="color: #a78bfa; font-weight: bold;">💎 VIP 전용 고객 지원 및 무제한 보관</div>
           </div>
         </div>
-        <button type="button" class="btn btn-secondary" style="background: linear-gradient(135deg, #9d4edd, #7c3aed); margin-top: 24px; width: 100%;" onclick="requestTossPayment('프로 팩', 15900, 3000)">할인가로 충전하기</button>
+        <button type="button" class="btn btn-secondary" style="background: linear-gradient(135deg, #9d4edd, #7c3aed); margin-top: 24px; width: 100%; cursor: pointer;" onclick="requestTossPayment('프로 팩', 15900, 3000)">할인가로 충전하기</button>
       </div>
 
     </div>
@@ -577,7 +577,7 @@
 
 <script>
   const SUPABASE_URL = "https://lnovwtmuddjsuqfpvuwi.supabase.co";
-  const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imxub3Z3dG11ZGRqc3VxZnB2dXdpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTMwNzU0NTMsImV4cCI6MjEwODY1MTQ1M30.OV0n9gbw3vtPerYfe4-dBdj-52rLGhSvv0ybFAprFkk";
+  const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imxub3Z3dG11ZGRqc3VxZnB2dXdpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTMwNzU0NTMsImV4cCI6MjEwODY1MTQ1M30.OV0n9gbw3vtPerYfe4-dzbdj-52rLGhSvv0ybFAprFkk";
 
   let supabaseClient = null;
   try {
@@ -634,7 +634,6 @@
     }
   };
 
-  // ⭐️ DB 크레딧 조회 및 누락 시 자동 생성 방어 로직 (150 리셋 완벽 방지)
   async function fetchUserProfile() {
     if (!currentUser || !supabaseClient) return;
     
@@ -674,8 +673,8 @@
       .eq('id', currentUser.id);
   }
 
-  // 💳 토스페이먼츠 결제 요청 함수 (안전 모드)
-  function requestTossPayment(packageName, amount, creditAmount) {
+  // 💳 토스페이먼츠 결제위젯 연동 함수 (테스트 전용 위젯 클라이언트 키 적용)
+  async function requestTossPayment(packageName, amount, creditAmount) {
     if (!currentUser) {
       alert('로그인 후 이용해주세요.');
       return;
@@ -683,58 +682,54 @@
 
     try {
       if (typeof TossPayments === 'undefined') {
-        alert('토스페이먼츠 SDK가 로드되지 않았습니다. 인터넷 연결을 확인해주세요.');
+        alert('토스페이먼츠 SDK가 로드되지 않았습니다.');
         return;
       }
 
-      // 토스페이먼츠 테스트 클라이언트 키
-      const clientKey = "test_ck_D5GePWvyJnrK0W0k6q8gLzN97Eoq";
-      const tossPayments = TossPayments(clientKey);
-
-      // 주문 고유 번호 생성
-      const orderId = "ORDER_" + Date.now() + "_" + Math.random().toString(36).substring(2, 7);
+      // 토스페이먼츠 공식 테스트용 클라이언트 키 (결제위젯 전용)
+      const clientKey = "test_gck_Z69RbmYJWYgq75w5lWp88nEdBMw6";
+      const customerKey = "CUSTOMER_" + currentUser.id.substring(0, 10);
+      
+      const tossPayments = await TossPayments(clientKey);
+      const payment = tossPayments.payment({ customerKey });
 
       closeModal();
       document.getElementById('statusText').innerText = `💳 ${packageName} 결제창을 호출하는 중...`;
 
-      // 토스페이먼츠 결제창 호출 (테스트 모드)
-      tossPayments.requestPayment('카드', {
-        amount: amount,
-        orderId: orderId,
+      await payment.requestPayment({
+        method: "CARD",
+        amount: {
+          currency: "KRW",
+          value: amount,
+        },
+        orderId: "ORDER_" + Date.now() + "_" + Math.random().toString(36).substring(2, 7),
         orderName: `NOIR STUDIO - ${packageName} (${creditAmount} CR)`,
-        customerName: currentUser.email || '크리에이터',
         successUrl: window.location.origin + `/payment-success?credits=${creditAmount}&amount=${amount}`,
         failUrl: window.location.origin + `/payment-fail`,
+        customerEmail: currentUser.email || 'creator@noirstudio.com',
+        customerName: '크리에이터',
       });
 
     } catch (err) {
-      console.error("결제 요청 에러:", err);
-      alert("결제 중 오류가 발생했습니다: " + err.message);
+      console.error("결제 에러:", err);
+      alert("결제 창 호출 중 오류가 발생했습니다: " + err.message);
     }
   }
 
   async function handleSocialLogin(providerName) {
     if (!supabaseClient) {
-      alert('Supabase 클라이언트가 초기화되지 않았습니다.');
+      alert('Supabase 초기화 실패');
       return;
     }
-
-    const { error } = await supabaseClient.auth.signInWithOAuth({
+    await supabaseClient.auth.signInWithOAuth({
       provider: providerName,
-      options: {
-        redirectTo: window.location.origin
-      }
+      options: { redirectTo: window.location.origin }
     });
-
-    if (error) {
-      alert('소셜 로그인 오류: ' + error.message);
-    }
   }
 
   async function handleLogout() {
-    if (confirm('정말 로그아웃 하시겠습니까?')) {
+    if (confirm('로그아웃 하시겠습니까?')) {
       if (supabaseClient) await supabaseClient.auth.signOut();
-      alert('로그아웃되었습니다.');
       window.location.reload();
     }
   }
@@ -746,13 +741,11 @@
   function handlePlanBadgeClick() {
     planClickCount++;
     if (planClickTimer) clearTimeout(planClickTimer);
-
     if (planClickCount >= 5) {
       planClickCount = 0;
       simulateUpgrade();
       return;
     }
-
     planClickTimer = setTimeout(() => {
       planClickCount = 0;
       openModal();
@@ -786,9 +779,8 @@
   function closeModal() { document.getElementById('pricingModal').style.display = 'none'; }
 
   async function simulateUpgrade() {
-    const inputKey = prompt("관리자 전용 우회 키를 입력해 주세요.");
+    const inputKey = prompt("관리자 키를 입력해 주세요.");
     if (inputKey === null) return;
-
     if (inputKey.trim() === ADMIN_SECRET_KEY) {
       isProUser = true;
       applyAdminUI();
@@ -799,11 +791,11 @@
       closeModal();
       updateCreditDisplay();
     } else {
-      alert("올바르지 않은 키입니다.");
+      alert("키가 올바르지 않습니다.");
     }
   }
 
-  function setStarterPrompt(englishPrompt) { document.getElementById('prompt').value = englishPrompt; }
+  function setStarterPrompt(p) { document.getElementById('prompt').value = p; }
   function clearPrompt() { document.getElementById('prompt').value = ''; document.getElementById('prompt').focus(); }
 
   function setRatio(ratioName, apiSize) {
@@ -820,35 +812,26 @@
   }
 
   function applyRandomPrompt() {
-    const randomIndex = Math.floor(Math.random() * randomPrompts.length);
-    document.getElementById('prompt').value = randomPrompts[randomIndex];
+    const r = Math.floor(Math.random() * randomPrompts.length);
+    document.getElementById('prompt').value = randomPrompts[r];
   }
 
   function cancelGeneration() {
     if (!isGenerating) return;
     if (abortController) { abortController.abort(); abortController = null; }
     isGenerating = false;
-
     if (activeCost > 0 && !isProUser) {
       updateServerCredits(credits + activeCost);
     }
     const refundedCost = activeCost;
     activeCost = 0;
-
-    const preview = document.getElementById('previewBox');
-    const status = document.getElementById('statusText');
-    const downloadArea = document.getElementById('downloadArea');
-
-    preview.innerHTML = '<p style="color: #3f3f46; font-size: 0.85rem;">결과물이 이 스크린에 표시됩니다.</p>';
-    status.innerText = isProUser ? `⚠️ 작업이 취소되었습니다.` : `⚠️ 생성이 취소되어 사용된 ${refundedCost} 크레딧이 자동 환불되었습니다.`;
-    downloadArea.style.display = 'none';
+    document.getElementById('previewBox').innerHTML = '<p style="color: #3f3f46; font-size: 0.85rem;">결과물이 이 스크린에 표시됩니다.</p>';
+    document.getElementById('statusText').innerText = isProUser ? `⚠️ 작업이 취소되었습니다.` : `⚠️ 생성이 취소되어 사용된 ${refundedCost} 크레딧이 자동 환불되었습니다.`;
+    document.getElementById('downloadArea').style.display = 'none';
   }
 
   async function downloadResultFile() {
-    if (!currentDownloadUrl) {
-      alert('다운로드할 결과물이 없습니다.');
-      return;
-    }
+    if (!currentDownloadUrl) return;
     try {
       const response = await fetch(currentDownloadUrl);
       const blob = await response.blob();
@@ -866,8 +849,7 @@
   }
 
   async function generateDemoImage() {
-    if (isGenerating) { alert('작업이 진행 중입니다.'); return; }
-
+    if (isGenerating) { alert('작업 진행 중입니다.'); return; }
     const cost = 10;
     if (!isProUser) {
       if (credits < cost) { openModal(); alert('크레딧이 부족합니다!'); return; }
@@ -886,7 +868,6 @@
 
     isGenerating = true;
     abortController = new AbortController();
-
     const status = document.getElementById('statusText');
     const preview = document.getElementById('previewBox');
     const vidBtn = document.getElementById('vidBtn');
@@ -894,21 +875,15 @@
 
     downloadArea.style.display = 'none';
     status.innerHTML = `⚡ 이미지 생성 중... <button onclick="cancelGeneration()" style="margin-left:8px; background:#ef4444; color:white; border:none; padding:2px 8px; border-radius:4px; cursor:pointer;">취소</button>`;
-    preview.innerHTML = '<p style="color: #71717a;">실사 이미지 랜더링 중...</p>';
+    preview.innerHTML = '<p style="color: #71717a;">실사 이미지 렌더링 중...</p>';
 
     try {
       const response = await fetch('/api/generate', {
         method: 'POST',
-        headers: { 
-          'Content-Type': 'application/json',
-          'Accept': 'application/json'
-        },
+        headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
         body: JSON.stringify({
           endpoint: '/fal-ai/flux/dev',
-          bodyData: {
-            prompt: promptInput + ", highly detailed, photorealistic, 8k resolution, raw photo",
-            image_size: selectedImageSize
-          }
+          bodyData: { prompt: promptInput + ", highly detailed, photorealistic, 8k resolution", image_size: selectedImageSize }
         }),
         signal: abortController.signal
       });
@@ -925,29 +900,21 @@
         currentFileType = 'png';
 
         const wmDisplay = isProUser ? 'none' : 'block';
-        preview.innerHTML = `
-          <div class="media-wrapper">
-            <img src="${currentImageUrl}" alt="Generated Image">
-            <div id="previewWatermark" class="watermark-overlay" style="display: ${wmDisplay};">NOIR STUDIO</div>
-          </div>
-        `;
+        preview.innerHTML = `<div class="media-wrapper"><img src="${currentImageUrl}"><div class="watermark-overlay" style="display: ${wmDisplay};">NOIR STUDIO</div></div>`;
         status.innerText = '✅ 이미지 생성 완료!';
         vidBtn.disabled = false;
         downloadArea.style.display = 'block';
-
         await saveToCloudHistory('IMG', currentImageUrl, promptInput, 'done');
       } else {
-        throw new Error("이미지 데이터가 없습니다.");
+        throw new Error("이미지 데이터 없음");
       }
     } catch (err) {
       if (err.name === 'AbortError') return;
       isGenerating = false;
       if (activeCost > 0 && !isProUser) {
         await updateServerCredits(credits + activeCost);
-        status.innerText = `❌ 오류: ${err.message} (크레딧 자동 환불됨)`;
-      } else {
-        status.innerText = '❌ 오류: ' + err.message;
       }
+      status.innerText = '❌ 오류: ' + err.message;
       activeCost = 0;
     }
   }
@@ -956,23 +923,16 @@
     try {
       const url = new URL(string);
       return url.protocol === "http:" || url.protocol === "https:";
-    } catch (_) {
-      return false;
-    }
+    } catch (_) { return false; }
   }
 
   async function generateDemoVideo() {
-    if (isGenerating) { alert('작업이 진행 중입니다.'); return; }
-    if (!currentImageUrl) { alert('먼저 이미지를 생성한 후 비디오로 변환해 주세요!'); return; }
-
-    if (!isValidHttpUrl(currentImageUrl)) {
-      alert('유효하지 않은 이미지 형식입니다.');
-      return;
-    }
+    if (isGenerating) { alert('작업 진행 중입니다.'); return; }
+    if (!currentImageUrl || !isValidHttpUrl(currentImageUrl)) { alert('먼저 유효한 이미지를 생성해주세요!'); return; }
 
     const cost = 50;
     if (!isProUser) {
-      if (credits < cost) { openModal(); alert('크레딧이 부족합니다!'); return; }
+      if (credits < cost) { openModal(); alert('크레딧 부족!'); return; }
       await updateServerCredits(credits - cost);
       activeCost = cost;
     } else {
@@ -980,25 +940,15 @@
     }
 
     isGenerating = true;
-
-    const promptText = document.getElementById('prompt').value.trim() || "Cinematic motion, high quality";
+    const promptText = document.getElementById('prompt').value.trim() || "Cinematic motion";
     const status = document.getElementById('statusText');
-    status.innerText = '🎬 비디오 생성 작업이 백그라운드에 등록 중입니다...';
+    status.innerText = '🎬 비디오 생성 백그라운드 등록 중...';
 
     try {
       const response = await fetch('/api/generate', {
         method: 'POST',
-        headers: { 
-          'Content-Type': 'application/json',
-          'Accept': 'application/json'
-        },
-        body: JSON.stringify({
-          endpoint: '/fal-ai/minimax/video-01',
-          bodyData: {
-            prompt: promptText,
-            image_url: currentImageUrl
-          }
-        })
+        headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+        body: JSON.stringify({ endpoint: '/fal-ai/minimax/video-01', bodyData: { prompt: promptText, image_url: currentImageUrl } })
       });
 
       const data = await response.json();
@@ -1006,29 +956,17 @@
 
       let statusUrl = data.status_url || data.response_url;
       let rawReqId = data.request_id || data.requestId || data.id;
-
-      if (!statusUrl && rawReqId) {
-        statusUrl = `https://queue.fal.run/fal-ai/minimax/video-01/requests/${rawReqId}`;
-      }
-
-      if (!statusUrl) throw new Error("요청 상태 URL을 받지 못했습니다.");
+      if (!statusUrl && rawReqId) statusUrl = `https://queue.fal.run/fal-ai/minimax/video-01/requests/${rawReqId}`;
+      if (!statusUrl) throw new Error("상태 URL 누락");
 
       activeCost = 0;
-      
       const historyRow = await saveToCloudHistory('VIDEO', statusUrl, promptText, 'processing');
-      const historyId = historyRow ? historyRow.id : null;
-
-      status.innerText = `🚀 백그라운드 작업 등록 완료! (비디오 생성 중...)`;
-      pollVideoInBackground(historyId, statusUrl, promptText, true);
-
+      status.innerText = `🚀 비디오 생성 백그라운드 진행 중...`;
+      pollVideoInBackground(historyRow ? historyRow.id : null, statusUrl, promptText, true);
     } catch (err) {
       isGenerating = false;
-      if (!isProUser && activeCost > 0) {
-        await updateServerCredits(credits + activeCost);
-        status.innerText = `❌ 오류: ${err.message} (크레딧 자동 환불됨)`;
-      } else {
-        status.innerText = '❌ 오류: ' + err.message;
-      }
+      if (!isProUser && activeCost > 0) await updateServerCredits(credits + activeCost);
+      status.innerText = '❌ 오류: ' + err.message;
       activeCost = 0;
     }
   }
@@ -1037,235 +975,80 @@
     if (activePolls.has(statusUrl)) return;
     activePolls.add(statusUrl);
 
-    const POLL_INTERVAL = 4000;
-    const MAX_TIME = 15 * 60 * 1000;
-    const startTime = Date.now();
-
     const checkInterval = setInterval(async () => {
-      if (Date.now() - startTime > MAX_TIME) {
-        clearInterval(checkInterval);
-        activePolls.delete(statusUrl);
-        isGenerating = false;
-        await updateCloudHistoryStatus(historyId, statusUrl, 'failed', '시간 초과', promptText, isForeground);
-        return;
-      }
-
       try {
-        const checkRes = await fetch(`/api/generate?endpoint=${encodeURIComponent(statusUrl)}`, {
-          headers: { 'Accept': 'application/json' }
-        });
-
-        if (!checkRes.ok) {
-          if (checkRes.status === 404 || checkRes.status >= 500) {
-            clearInterval(checkInterval);
-            activePolls.delete(statusUrl);
-            isGenerating = false;
-            await updateCloudHistoryStatus(historyId, statusUrl, 'failed', '요청 만료 또는 서버 오류', promptText, isForeground);
-            return;
-          }
-          return;
-        }
-
+        const checkRes = await fetch(`/api/generate?endpoint=${encodeURIComponent(statusUrl)}`, { headers: { 'Accept': 'application/json' } });
+        if (!checkRes.ok) return;
         const checkData = await checkRes.json();
         const statusUpper = (checkData.status || '').toUpperCase();
 
         if (statusUpper === 'COMPLETED') {
+          clearInterval(checkInterval);
+          activePolls.delete(statusUrl);
+          isGenerating = false;
           let resultUrl = statusUrl.endsWith('/status') ? statusUrl.replace(/\/status$/, '') : statusUrl;
-          const resultRes = await fetch(`/api/generate?endpoint=${encodeURIComponent(resultUrl)}`, {
-            headers: { 'Accept': 'application/json' }
-          });
+          const resultRes = await fetch(`/api/generate?endpoint=${encodeURIComponent(resultUrl)}`, { headers: { 'Accept': 'application/json' } });
           const finalData = await resultRes.json();
-
-          let videoUrl = finalData.video?.url || finalData.output?.video?.url || finalData.url || extractAnyUrl(finalData);
-
-          if (videoUrl) {
-            clearInterval(checkInterval);
-            activePolls.delete(statusUrl);
-            isGenerating = false;
-            await updateCloudHistoryStatus(historyId, statusUrl, 'done', videoUrl, promptText, isForeground);
-          }
+          let videoUrl = finalData.video?.url || finalData.output?.video?.url || finalData.url;
+          if (videoUrl) await updateCloudHistoryStatus(historyId, statusUrl, 'done', videoUrl, promptText, isForeground);
         } else if (statusUpper === 'FAILED' || statusUpper === 'CANCELLED') {
           clearInterval(checkInterval);
           activePolls.delete(statusUrl);
           isGenerating = false;
-          await updateCloudHistoryStatus(historyId, statusUrl, 'failed', checkData.error || '생성 실패', promptText, isForeground);
+          await updateCloudHistoryStatus(historyId, statusUrl, 'failed', '실패', promptText, isForeground);
         }
-      } catch (err) {
-        console.error("폴링 에러:", err);
-      }
-    }, POLL_INTERVAL);
-  }
-
-  function extractAnyUrl(obj) {
-    if (!obj || typeof obj !== 'object') return null;
-    for (let key in obj) {
-      const val = obj[key];
-      if (typeof val === 'string' && val.startsWith('http') && !val.includes('/requests/')) return val;
-      else if (typeof val === 'object' && val !== null) {
-        const found = extractAnyUrl(val);
-        if (found) return found;
-      }
-    }
-    return null;
+      } catch (err) { console.error(err); }
+    }, 4000);
   }
 
   async function saveToCloudHistory(type, url, promptText, status = 'done') {
     if (!currentUser || !supabaseClient) return null;
-    
-    const { data, error } = await supabaseClient.from('generation_history').insert([
-      { user_id: currentUser.id, type, url, prompt: promptText || '', status }
-    ]).select().single();
-    
-    if (error) {
-      alert("보관함 저장 실패: " + error.message);
-      return null;
-    }
-    
+    const { data } = await supabaseClient.from('generation_history').insert([{ user_id: currentUser.id, type, url, prompt: promptText || '', status }]).select().single();
     await renderHistory();
     return data;
   }
 
   async function updateCloudHistoryStatus(historyId, statusUrl, status, value, promptText, isForeground = false) {
     if (!currentUser || !supabaseClient) return;
-
     if (completingUrls.has(statusUrl)) return;
-    if (status === 'done' || status === 'failed') {
-      completingUrls.add(statusUrl);
-    }
-    
-    if (historyId) {
-      await supabaseClient.from('generation_history').delete().eq('id', historyId);
-    }
-
-    await supabaseClient.from('generation_history').insert([
-      { 
-        user_id: currentUser.id, 
-        type: 'VIDEO', 
-        url: (status === 'failed' ? 'https://failed-placeholder' : value), 
-        prompt: promptText || '', 
-        status: status 
-      }
-    ]);
-
+    if (status === 'done' || status === 'failed') completingUrls.add(statusUrl);
+    if (historyId) await supabaseClient.from('generation_history').delete().eq('id', historyId);
+    await supabaseClient.from('generation_history').insert([{ user_id: currentUser.id, type: 'VIDEO', url: value, prompt: promptText || '', status }]);
     await renderHistory();
-
-    if (status === 'done') {
-      if (isForeground) {
-        currentImageUrl = value;
-        currentDownloadUrl = value;
-        currentFileType = 'mp4';
-
-        const preview = document.getElementById('previewBox');
-        if (preview) {
-          const wmDisplay = isProUser ? 'none' : 'block';
-          preview.innerHTML = `
-            <div class="media-wrapper">
-              <video src="${value}" autoplay loop muted controls playsinline preload="auto" crossorigin="anonymous" style="width:100%; height:100%; object-fit:contain;"></video>
-              <div class="watermark-overlay" style="display: ${wmDisplay};">NOIR STUDIO</div>
-            </div>
-          `;
-        }
-        
-        document.getElementById('downloadArea').style.display = 'block';
-        document.getElementById('statusText').innerText = '✅ 비디오 변환 완료!';
-        alert(`✨ [비디오 완성] 동영상 변환이 완료되었습니다!`);
-      } else {
-        document.getElementById('statusText').innerText = `✅ 백그라운드 비디오 변환 완료 (보관함에서 확인하세요)`;
-      }
+    if (status === 'done' && isForeground) {
+      currentImageUrl = value; currentDownloadUrl = value; currentFileType = 'mp4';
+      const wmDisplay = isProUser ? 'none' : 'block';
+      document.getElementById('previewBox').innerHTML = `<div class="media-wrapper"><video src="${value}" autoplay loop muted controls></video><div class="watermark-overlay" style="display: ${wmDisplay};">NOIR STUDIO</div></div>`;
+      document.getElementById('downloadArea').style.display = 'block';
+      document.getElementById('statusText').innerText = '✅ 비디오 변환 완료!';
+      alert('✨ 비디오 변환 완료!');
     }
   }
 
   async function renderHistory() {
     const historyContainer = document.querySelector('.history-grid');
     if (!historyContainer || !currentUser || !supabaseClient) return;
-
-    const { data: history, error } = await supabaseClient
-      .from('generation_history')
-      .select('*')
-      .eq('user_id', currentUser.id)
-      .order('created_at', { ascending: false })
-      .limit(20);
-
-    if (error) return;
-
-    if (!history || history.length === 0) {
-      historyContainer.innerHTML = '<p style="color: #71717a; font-size: 13px; text-align: center; width: 100%;">생성된 작업물이 없습니다.</p>';
-      return;
-    }
-
-    historyContainer.innerHTML = history.map((item) => {
-      if (item.status === 'processing') {
-        return `<div class="history-item" onclick="cancelStuckItem('${item.id}')" title="클릭하여 작업 취소" style="display:flex; align-items:center; justify-content:center; flex-direction:column; background:#12121a; border-color:var(--accent-purple); cursor:pointer;"><span style="font-size:1.2rem;">⏳</span><span style="font-size:0.65rem; color:#c084fc;">생성 중...</span></div>`;
-      } else if (item.status === 'failed') {
-        return `<div class="history-item" onclick="cancelStuckItem('${item.id}')" title="클릭하여 삭제" style="display:flex; align-items:center; justify-content:center; flex-direction:column; background:#1a1212; border-color:#ef4444; cursor:pointer;"><span style="font-size:1.2rem;">❌</span><span style="font-size:0.65rem; color:#ef4444;">실패</span></div>`;
-      } else {
-        const thumbContent = item.type === 'VIDEO' 
-          ? `<div style="position:relative; width:100%; height:100%; background:linear-gradient(135deg, #181824 0%, #0a0a0f 100%); display:flex; align-items:center; justify-content:center;">
-               <div style="width:36px; height:36px; border-radius:50%; background:rgba(157,78,221,0.8); display:flex; align-items:center; justify-content:center; box-shadow:0 0 12px rgba(157,78,221,0.5);">
-                 <span style="font-size:0.9rem; color:#fff; font-weight:bold; margin-left:2px;">▶</span>
-               </div>
-             </div>` 
-          : `<img src="${item.url}" alt="history">`;
-        return `<div class="history-item" onclick="loadHistoryItemFromUrl('${item.url}', '${item.type}')">${thumbContent}<span class="badge-tag">${item.type}</span></div>`;
-      }
-    }).join('');
-  }
-
-  async function cancelStuckItem(itemId) {
-    if (confirm('해당 기록을 삭제하시겠습니까?')) {
-      if (currentUser && supabaseClient) {
-        await supabaseClient.from('generation_history').delete().eq('id', itemId);
-        await renderHistory();
-      }
-    }
-  }
-
-  async function clearHistory() {
-    if (confirm('클라우드 기록을 전부 삭제하시겠습니까?')) {
-      if (currentUser && supabaseClient) {
-        await supabaseClient.from('generation_history').delete().eq('user_id', currentUser.id);
-        await renderHistory();
-      }
-    }
+    const { data: history } = await supabaseClient.from('generation_history').select('*').eq('user_id', currentUser.id).order('created_at', { ascending: false }).limit(20);
+    if (!history || history.length === 0) { historyContainer.innerHTML = '<p style="color: #71717a; font-size: 13px; text-align: center; width: 100%;">생성된 작업물이 없습니다.</p>'; return; }
+    historyContainer.innerHTML = history.map(item => `
+      <div class="history-item" onclick="loadHistoryItemFromUrl('${item.url}', '${item.type}')">
+        ${item.type === 'VIDEO' ? '<div style="width:100%;height:100%;background:#181824;display:flex;align-items:center;justify-content:center;color:#fff;">▶</div>' : `<img src="${item.url}">`}
+        <span class="badge-tag">${item.type}</span>
+      </div>
+    `).join('');
   }
 
   function loadHistoryItemFromUrl(url, type) {
-    currentImageUrl = url;
-    currentDownloadUrl = url;
-    currentFileType = (type === 'VIDEO') ? 'mp4' : 'png';
-
-    const preview = document.getElementById('previewBox');
-    const vidBtn = document.getElementById('vidBtn');
-
-    if (preview) {
-      const wmDisplay = isProUser ? 'none' : 'block';
-      if (type === 'VIDEO') {
-        preview.innerHTML = `<div class="media-wrapper"><video src="${url}" autoplay loop muted controls playsinline preload="auto" crossorigin="anonymous" style="width:100%; height:100%; object-fit:contain;"></video><div class="watermark-overlay" style="display:${wmDisplay};">NOIR STUDIO</div></div>`;
-        if (vidBtn) vidBtn.disabled = true;
-      } else {
-        preview.innerHTML = `<div class="media-wrapper"><img src="${url}" alt="Media"><div class="watermark-overlay" style="display:${wmDisplay};">NOIR STUDIO</div></div>`;
-        if (vidBtn) vidBtn.disabled = false;
-      }
-    }
+    currentImageUrl = url; currentDownloadUrl = url; currentFileType = type === 'VIDEO' ? 'mp4' : 'png';
+    const wmDisplay = isProUser ? 'none' : 'block';
+    document.getElementById('previewBox').innerHTML = `<div class="media-wrapper">${type === 'VIDEO' ? `<video src="${url}" controls></video>` : `<img src="${url}">`}<div class="watermark-overlay" style="display: ${wmDisplay};">NOIR STUDIO</div></div>`;
     document.getElementById('downloadArea').style.display = 'block';
   }
 
   async function resumePendingPolls() {
     if (!currentUser || !supabaseClient) return;
-    const { data: history } = await supabaseClient
-      .from('generation_history')
-      .select('*')
-      .eq('user_id', currentUser.id)
-      .eq('status', 'processing');
-
-    if (history && history.length > 0) {
-      isGenerating = true;
-      history.forEach(item => {
-        if (item.url && item.url.startsWith('http')) {
-          pollVideoInBackground(item.id, item.url, item.prompt, false);
-        }
-      });
-    }
+    const { data: history } = await supabaseClient.from('generation_history').select('*').eq('user_id', currentUser.id).eq('status', 'processing');
+    if (history) history.forEach(item => pollVideoInBackground(item.id, item.url, item.prompt, false));
   }
 </script>
 
