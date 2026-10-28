@@ -356,8 +356,8 @@
       border: 1px solid #2e2e3e;
       border-radius: 20px;
       width: 90%;
-      max-width: 500px;
-      padding: 32px 24px;
+      max-width: 900px;
+      padding: 40px 30px;
       box-shadow: 0 20px 60px rgba(0,0,0,0.9);
       position: relative;
     }
@@ -367,19 +367,6 @@
       background: none; border: none;
       color: #71717a; font-size: 1.5rem;
       cursor: pointer;
-    }
-    .benefit-list {
-      margin: 16px 0;
-      display: flex;
-      flex-direction: column;
-      gap: 10px;
-      font-size: 0.85rem;
-      color: #d1d5db;
-    }
-    .benefit-item {
-      display: flex;
-      align-items: center;
-      gap: 8px;
     }
 
     #authOverlay {
@@ -511,22 +498,73 @@
   </div>
 </div>
 
-<!-- 모달창 -->
+<!-- 모달창 (3단 크레딧 충전 팩 - 프로팩 35% 할인 적용) -->
 <div class="modal-backdrop" id="pricingModal">
   <div class="modal-card">
     <button class="close-btn" onclick="closeModal()">&times;</button>
-    <h2 style="text-align: center; font-size: 1.2rem; color: #fff;">NOIR STUDIO PRO 멤버십</h2>
-    <p style="text-align: center; color: #a1a1aa; font-size: 0.8rem; margin-top: 4px;">크리에이터를 위한 압도적인 생성 성능과 프리미엄 혜택</p>
     
-    <div class="benefit-list">
-      <div class="benefit-item">⚡ <b>초고속 생성 우선순위 배정</b> (지연 없는 빠른 렌더링)</div>
-      <div class="benefit-item">🪙 <b>매월 1,000 크레딧</b> 충전 및 제공</div>
-      <div class="benefit-item">💼 <b>상업적 이용 권한</b> 완벽 보장</div>
-      <div class="benefit-item">🎬 <b>고화질(HD) 무손실 다운로드 및 워터마크 해제</b></div>
+    <div style="text-align: center; margin-bottom: 30px;">
+      <h2 style="font-size: 1.5rem; color: #fff; letter-spacing: 1px; margin-bottom: 6px;">NOIR STUDIO 크레딧 충전 팩</h2>
+      <p style="color: #a1a1aa; font-size: 0.85rem;">구독 부담 없이, 필요한 만큼만 충전하고 언제든 자유롭게 사용하세요.</p>
     </div>
 
-    <div style="margin-top: 24px;">
-      <button class="btn btn-secondary" onclick="alert('현재 결제 기능을 안전하게 준비 중입니다. 곧 찾아뵙겠습니다!'); closeModal();" style="width:100%;">⚡ Pro 플랜 업그레이드 (결제 시스템 준비 중)</button>
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 16px; margin-bottom: 10px;">
+      
+      <!-- 1. 스타터 팩 -->
+      <div style="background: #181820; border: 1px solid #272730; border-radius: 16px; padding: 24px; display: flex; flex-direction: column; justify-content: space-between;">
+        <div>
+          <div style="font-size: 0.75rem; color: #a1a1aa; text-transform: uppercase; margin-bottom: 4px;">Light Pack</div>
+          <div style="font-size: 1.1rem; font-weight: bold; color: #fff; margin-bottom: 12px;">스타터 팩</div>
+          <div style="font-size: 1.6rem; font-weight: 800; color: #fff; margin-bottom: 4px;">₩3,900</div>
+          <div style="font-size: 0.75rem; color: #c084fc; margin-bottom: 20px;">⚡ 300 크레딧 충전</div>
+          
+          <div style="display: flex; flex-direction: column; gap: 8px; font-size: 0.8rem; color: #d1d5db; border-top: 1px solid #272730; padding-top: 16px;">
+            <div>✓ 이미지 약 30회 생성 가능</div>
+            <div>✓ 비디오 약 6회 변환 가능</div>
+            <div>✓ 유효기간 없음</div>
+          </div>
+        </div>
+        <button class="btn" style="background: #27273a; color: #fff; margin-top: 24px; width: 100%;" onclick="alert('결제 시스템 연동 준비 중입니다!'); closeModal();">충전하기</button>
+      </div>
+
+      <!-- 2. 크리에이터 팩 -->
+      <div style="background: #181820; border: 1px solid #272730; border-radius: 16px; padding: 24px; display: flex; flex-direction: column; justify-content: space-between;">
+        <div>
+          <div style="font-size: 0.75rem; color: #a1a1aa; text-transform: uppercase; margin-bottom: 4px;">Best Value</div>
+          <div style="font-size: 1.1rem; font-weight: bold; color: #fff; margin-bottom: 12px;">크리에이터 팩</div>
+          <div style="font-size: 1.6rem; font-weight: 800; color: #fff; margin-bottom: 4px;">₩9,900</div>
+          <div style="font-size: 0.75rem; color: #c084fc; margin-bottom: 20px;">⚡ 1,000 크레딧 충전</div>
+          
+          <div style="display: flex; flex-direction: column; gap: 8px; font-size: 0.8rem; color: #d1d5db; border-top: 1px solid #272730; padding-top: 16px;">
+            <div>✓ 이미지 약 100회 생성 가능</div>
+            <div>✓ 비디오 약 20회 변환 가능</div>
+            <div>✓ 우선 렌더링 지원</div>
+          </div>
+        </div>
+        <button class="btn" style="background: #27273a; color: #fff; margin-top: 24px; width: 100%;" onclick="alert('결제 시스템 연동 준비 중입니다!'); closeModal();">충전하기</button>
+      </div>
+
+      <!-- 3. 프로 팩 (35% 할인 적용) -->
+      <div style="background: linear-gradient(135deg, #181824 0%, #141026 100%); border: 1px solid var(--accent-purple); border-radius: 16px; padding: 24px; display: flex; flex-direction: column; justify-content: space-between; position: relative; box-shadow: 0 0 20px rgba(157,78,221,0.2);">
+        <div style="position: absolute; top: -12px; right: 20px; background: #ef4444; color: #fff; font-size: 0.65rem; font-weight: bold; padding: 3px 10px; border-radius: 10px; letter-spacing: 0.5px;">🔥 35% 할인특가</div>
+        <div>
+          <div style="font-size: 0.75rem; color: #d8b4fe; text-transform: uppercase; margin-bottom: 4px;">Pro Pack</div>
+          <div style="font-size: 1.1rem; font-weight: bold; color: #fff; margin-bottom: 12px;">프로 팩</div>
+          <div style="display: flex; align-items: baseline; gap: 8px; margin-bottom: 4px;">
+            <span style="font-size: 1.6rem; font-weight: 800; color: #fff;">₩15,900</span>
+            <span style="font-size: 0.85rem; color: #71717a; text-decoration: line-through;">₩24,900</span>
+          </div>
+          <div style="font-size: 0.75rem; color: #c084fc; margin-bottom: 20px;">⚡ 3,000 크레딧 충전 (최대 가성비)</div>
+          
+          <div style="display: flex; flex-direction: column; gap: 8px; font-size: 0.8rem; color: #d1d5db; border-top: 1px solid #272730; padding-top: 16px;">
+            <div>✓ 이미지 약 300회 생성 가능</div>
+            <div>✓ 비디오 약 60회 변환 가능</div>
+            <div>✓ 헤비 유저 최적 파격 할인가</div>
+          </div>
+        </div>
+        <button class="btn btn-secondary" style="background: linear-gradient(135deg, #9d4edd, #7c3aed); margin-top: 24px; width: 100%;" onclick="alert('결제 시스템 연동 준비 중입니다!'); closeModal();">할인가로 충전하기</button>
+      </div>
+
     </div>
   </div>
 </div>
