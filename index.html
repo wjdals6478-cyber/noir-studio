@@ -412,8 +412,7 @@
     <h2 style="font-size: 1.4rem; color: #fff; margin-bottom: 8px; letter-spacing: 1px;">NOIR STUDIO</h2>
     <p style="color: #a1a1aa; font-size: 0.8rem; margin-bottom: 28px;">구글 계정으로 로그인하여 크리에이티브 서비스를 시작하세요.</p>
     
-    <!-- 구글 소셜 로그인 단일 버튼 -->
-    <button type="button" onclick="handleSocialLogin('google')" style="width: 100%; padding: 14px; border-radius: 12px; border: 1px solid #444; background: #fff; color: #000; font-weight: bold; font-size: 0.95rem; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 10px; transition: transform 0.2s;">
+    <button type="button" onclick="handleSocialLogin('google')" style="width: 100%; padding: 14px; border-radius: 12px; border: 1px solid #444; background: #fff; color: #000; font-weight: bold; font-size: 0.95rem; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 10px;">
       <svg width="20" height="20" viewBox="0 0 24 24"><path fill="#4285F4" d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.82-2.4 3.68v3.05h3.88c2.27-2.09 3.66-5.17 3.66-9.17z"/><path fill="#34A853" d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.88-3.05c-1.08.72-2.45 1.16-4.05 1.16-3.13 0-5.78-2.11-6.73-4.96H1.19v3.14C3.15 21.36 7.22 24 12 24z"/><path fill="#FBBC05" d="M5.27 14.24c-.25-.72-.38-1.49-.38-2.24s.13-1.52.38-2.24V6.62H1.19C.43 8.15 0 9.89 0 11.75s.43 3.6 1.19 5.13l4.08-3.14z"/><path fill="#EA4335" d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.22 0 3.15 2.64 1.19 6.62l4.08 3.14c.95-2.85 3.6-4.96 6.73-4.96z"/></svg>
       Google 계정으로 계속하기
     </button>
@@ -533,7 +532,6 @@
 </div>
 
 <script>
-  // ── Supabase 설정 및 전역 변수 초기화 ──
   const SUPABASE_URL = "https://lnovwtmuddjsuqfpvuwi.supabase.co";
   const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imxub3Z3dG11ZGRqc3VxZnB2dXdpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTMwNzU0NTMsImV4cCI6MjEwODY1MTQ1M30.OV0n9gbw3vtPerYfe4-dBdj-52rLGhSvv0ybFAprFkk";
 
@@ -558,7 +556,6 @@
   let planClickCount = 0;
   let planClickTimer = null;
 
-  // ⭐️ 페이지 로드 시 구글 세션 체크 및 DB 크레딧 동기화 (150으로 리셋 방지)
   window.onload = async () => {
     if (supabaseClient) {
       supabaseClient.auth.onAuthStateChange(async (event, session) => {
@@ -593,13 +590,27 @@
     }
   };
 
+  // ⭐️ DB 크레딧 조회 및 누락 시 자동 생성 방어 로직 (150 리셋 완벽 방지)
   async function fetchUserProfile() {
     if (!currentUser || !supabaseClient) return;
-    const { data, error } = await supabaseClient
+    
+    let { data, error } = await supabaseClient
       .from('profiles')
       .select('credits, is_pro')
       .eq('id', currentUser.id)
       .maybeSingle();
+
+    if (!data || error) {
+      const { data: newProfile } = await supabaseClient
+        .from('profiles')
+        .insert([{ id: currentUser.id, credits: 150, is_pro: false }])
+        .select('credits, is_pro')
+        .single();
+        
+      if (newProfile) {
+        data = newProfile;
+      }
+    }
 
     if (data) {
       credits = data.credits;
@@ -1016,17 +1027,13 @@
   }
 
   async function saveToCloudHistory(type, url, promptText, status = 'done') {
-    if (!currentUser || !supabaseClient) {
-      console.warn("로그인 정보 또는 Supabase 클라이언트가 없습니다.");
-      return null;
-    }
+    if (!currentUser || !supabaseClient) return null;
     
     const { data, error } = await supabaseClient.from('generation_history').insert([
       { user_id: currentUser.id, type, url, prompt: promptText || '', status }
     ]).select().single();
     
     if (error) {
-      console.error("Supabase 저장 에러:", error);
       alert("보관함 저장 실패: " + error.message);
       return null;
     }
@@ -1044,11 +1051,10 @@
     }
     
     if (historyId) {
-      const { error: delError } = await supabaseClient.from('generation_history').delete().eq('id', historyId);
-      if (delError) console.error("삭제 에러:", delError);
+      await supabaseClient.from('generation_history').delete().eq('id', historyId);
     }
 
-    const { error: insError } = await supabaseClient.from('generation_history').insert([
+    await supabaseClient.from('generation_history').insert([
       { 
         user_id: currentUser.id, 
         type: 'VIDEO', 
@@ -1057,11 +1063,6 @@
         status: status 
       }
     ]);
-
-    if (insError) {
-      console.error("비디오 완료 기록 삽입 에러:", insError);
-      alert("비디오 보관함 저장 실패: " + insError.message);
-    }
 
     await renderHistory();
 
@@ -1088,8 +1089,6 @@
       } else {
         document.getElementById('statusText').innerText = `✅ 백그라운드 비디오 변환 완료 (보관함에서 확인하세요)`;
       }
-    } else if (status === 'failed' && isForeground) {
-      document.getElementById('statusText').innerText = `❌ 비디오 변환 실패: ${value}`;
     }
   }
 
@@ -1104,10 +1103,7 @@
       .order('created_at', { ascending: false })
       .limit(20);
 
-    if (error) {
-      console.error("히스토리 불러오기 에러:", error);
-      return;
-    }
+    if (error) return;
 
     if (!history || history.length === 0) {
       historyContainer.innerHTML = '<p style="color: #71717a; font-size: 13px; text-align: center; width: 100%;">생성된 작업물이 없습니다.</p>';
@@ -1116,9 +1112,9 @@
 
     historyContainer.innerHTML = history.map((item) => {
       if (item.status === 'processing') {
-        return `<div class="history-item" onclick="cancelStuckItem('${item.id}')" title="클릭하여 멈춘 작업 취소" style="display:flex; align-items:center; justify-content:center; flex-direction:column; background:#12121a; border-color:var(--accent-purple); cursor:pointer;"><span style="font-size:1.2rem;">⏳</span><span style="font-size:0.65rem; color:#c084fc;">생성 중...</span></div>`;
+        return `<div class="history-item" onclick="cancelStuckItem('${item.id}')" title="클릭하여 작업 취소" style="display:flex; align-items:center; justify-content:center; flex-direction:column; background:#12121a; border-color:var(--accent-purple); cursor:pointer;"><span style="font-size:1.2rem;">⏳</span><span style="font-size:0.65rem; color:#c084fc;">생성 중...</span></div>`;
       } else if (item.status === 'failed') {
-        return `<div class="history-item" onclick="cancelStuckItem('${item.id}')" title="클릭하여 실패 기록 삭제" style="display:flex; align-items:center; justify-content:center; flex-direction:column; background:#1a1212; border-color:#ef4444; cursor:pointer;"><span style="font-size:1.2rem;">❌</span><span style="font-size:0.65rem; color:#ef4444;">실패</span></div>`;
+        return `<div class="history-item" onclick="cancelStuckItem('${item.id}')" title="클릭하여 삭제" style="display:flex; align-items:center; justify-content:center; flex-direction:column; background:#1a1212; border-color:#ef4444; cursor:pointer;"><span style="font-size:1.2rem;">❌</span><span style="font-size:0.65rem; color:#ef4444;">실패</span></div>`;
       } else {
         const thumbContent = item.type === 'VIDEO' 
           ? `<div style="position:relative; width:100%; height:100%; background:linear-gradient(135deg, #181824 0%, #0a0a0f 100%); display:flex; align-items:center; justify-content:center;">
@@ -1137,7 +1133,6 @@
       if (currentUser && supabaseClient) {
         await supabaseClient.from('generation_history').delete().eq('id', itemId);
         await renderHistory();
-        document.getElementById('statusText').innerText = '⚠️ 기록이 삭제되었습니다.';
       }
     }
   }
