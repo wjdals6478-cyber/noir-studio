@@ -322,7 +322,6 @@
     .history-item:hover { transform: scale(1.03); border-color: var(--accent-purple); }
     .history-item img { width: 100%; height: 100%; object-fit: cover; }
     
-    /* 개별 삭제 버튼 스타일 추가 */
     .item-delete-btn {
       position: absolute;
       bottom: 4px;
@@ -564,7 +563,7 @@
     <div class="history-grid" id="historyGrid"></div>
   </div>
 
-  <!-- 푸터 영역 (사업자 정보, 고객센터 이메일 및 환불 정책 안내) -->
+  <!-- 푸터 영역 -->
   <div class="footer">
     <div class="footer-info">
       <span>상호명: 누아르 스튜디오 (NOIR STUDIO)</span>
@@ -582,7 +581,7 @@
   </div>
 </div>
 
-<!-- 모달창 (3단 크레딧 충전 팩 - 토스페이먼츠 정식 연동) -->
+<!-- 모달창 (3단 크레딧 충전 팩) -->
 <div class="modal-backdrop" id="pricingModal" onclick="closeModal()">
   <div class="modal-card" onclick="event.stopPropagation()">
     <button class="close-btn" onclick="closeModal()">&times;</button>
@@ -631,7 +630,7 @@
         <button type="button" class="btn btn-secondary" style="margin-top: 24px; width: 100%; cursor: pointer;" onclick="requestTossPayment('크리에이터 팩', 9900, 1000)">충전하기</button>
       </div>
 
-      <!-- 3. 프로 팩 (35% 할인특가) -->
+      <!-- 3. 프로 팩 -->
       <div style="background: linear-gradient(135deg, #181824 0%, #141026 100%); border: 1px solid var(--accent-purple); border-radius: 16px; padding: 24px; display: flex; flex-direction: column; justify-content: space-between; position: relative; box-shadow: 0 0 20px rgba(157,78,221,0.2);">
         <div style="position: absolute; top: -12px; right: 20px; background: #ef4444; color: #fff; font-size: 0.65rem; font-weight: bold; padding: 3px 10px; border-radius: 10px; letter-spacing: 0.5px;">🔥 35% 할인특가</div>
         <div>
@@ -653,6 +652,11 @@
         <button type="button" class="btn btn-secondary" style="background: linear-gradient(135deg, #9d4edd, #7c3aed); margin-top: 24px; width: 100%; cursor: pointer;" onclick="requestTossPayment('프로 팩', 15900, 3000)">할인가로 충전하기</button>
       </div>
 
+    </div>
+
+    <!-- 결제 모달 하단 안내 문구 추가 완료 -->
+    <div style="margin-top: 16px; padding-top: 12px; border-top: 1px solid #272730; font-size: 0.73rem; color: #a1a1aa; text-align: center;">
+      💳 결제 즉시 크레딧이 충전되며, 환불 및 이용 정책은 하단 푸터를 참고해주세요.
     </div>
   </div>
 </div>
@@ -778,6 +782,7 @@
         return;
       }
 
+      // ⭐️ [실서비스 전환 시] 테스트 키("test_gck_...")를 라이브(Live) 클라이언트 키로 교체하세요!
       const clientKey = "test_gck_docs_Ovk5rk1EwkEbP0W43n07xlzm"; 
       const tossPayments = TossPayments(clientKey);
       
@@ -1122,13 +1127,12 @@
     } catch (e) {}
   }
 
-  // 보관함 개별 항목 삭제 함수 추가
   async function deleteHistoryItem(id) {
     if (!currentUser || !supabaseClient) return;
     if (confirm('이 결과물을 보관함에서 삭제하시겠습니까?')) {
       try {
         const { error } = await supabaseClient.from('generation_history').delete().eq('id', id);
-        if (error) throw error;
+        if, error throw error;
         await renderHistory();
       } catch (e) {
         alert('삭제 중 오류가 발생했습니다: ' + e.message);
@@ -1143,7 +1147,6 @@
       const { data: history } = await supabaseClient.from('generation_history').select('*').eq('user_id', currentUser.id).order('created_at', { ascending: false }).limit(20);
       if (!history || history.length === 0) { historyContainer.innerHTML = '<p style="color: #71717a; font-size: 13px; text-align: center; width: 100%;">생성된 작업물이 없습니다.</p>'; return; }
       
-      // 각 아이템에 개별 X 삭제 버튼 추가
       historyContainer.innerHTML = history.map(item => `
         <div class="history-item" onclick="loadHistoryItemFromUrl('${item.url}', '${item.type}')">
           ${item.type === 'VIDEO' ? '<div style="width:100%;height:100%;background:#181824;display:flex;align-items:center;justify-content:center;color:#fff;">▶</div>' : `<img src="${item.url}">`}
