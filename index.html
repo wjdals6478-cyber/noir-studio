@@ -677,10 +677,17 @@
     }
   }
 
-  // 💳 [토스페이먼츠 정식 결제창 연동 함수]
+  // 💳 [토스페이먼츠 정식 결제창 연동 함수 (무제한 유저 400 에러 방지 포함)]
   function requestTossPayment(packageName, amount, creditAmount) {
     if (!currentUser) {
       alert('로그인 후 이용해주세요.');
+      return;
+    }
+
+    // 이미 무제한(PRO) 플랜인 유저가 충전 누를 시 400 에러 방지 및 안내
+    if (isProUser) {
+      alert('✨ 이미 NOIR STUDIO PRO(무제한) 플랜을 이용 중이십니다. 결제하실 필요가 없습니다!');
+      closeModal();
       return;
     }
 
@@ -690,8 +697,8 @@
         return;
       }
 
-      // 본인의 토스페이먼츠 테스트 클라이언트 키 입력 필요
-      const clientKey = "test_gck_docs_Ovk5rk1EwkEbP0W43n07xlzm";
+      // ⭐️ [주문서형·결제창형 연동키]의 클라이언트 키를 아래에 입력하세요
+      const clientKey = "test_ck_D5GePWvyJnrK0W0k6q8gLzN97Eoq"; 
       const tossPayments = TossPayments(clientKey);
       
       const orderId = "ORD" + Date.now() + Math.floor(Math.random() * 1000);
