@@ -8,6 +8,8 @@
   <script defer src="/_vercel/insights/script.js"></script>
   <!-- Supabase JS SDK CDN -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <!-- 토스페이먼츠 결제 SDK -->
+  <script src="https://js.tosspayments.com/v1/payment"></script>
 
   <meta name="description" content="NOIR STUDIO - 초고화질 AI 실사 이미지 및 시네마틱 모션 비디오 생성기">
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700;800&display=swap" rel="stylesheet">
@@ -498,7 +500,7 @@
   </div>
 </div>
 
-<!-- 모달창 (3단 크레딧 충전 팩 - 상업적 이용 및 워터마크 안내 명시) -->
+<!-- 모달창 (3단 크레딧 충전 팩 - 토스 결제 함수 연결 완료) -->
 <div class="modal-backdrop" id="pricingModal">
   <div class="modal-card">
     <button class="close-btn" onclick="closeModal()">&times;</button>
@@ -510,7 +512,7 @@
 
     <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px; margin-bottom: 10px;">
       
-      <!-- 1. 스타터 팩 (개인용) -->
+      <!-- 1. 스타터 팩 -->
       <div style="background: #181820; border: 1px solid #272730; border-radius: 16px; padding: 24px; display: flex; flex-direction: column; justify-content: space-between;">
         <div>
           <div style="font-size: 0.75rem; color: #a1a1aa; text-transform: uppercase; margin-bottom: 4px;">Light Pack</div>
@@ -525,10 +527,10 @@
             <div style="color: #71717a;">· 일반 생성 속도</div>
           </div>
         </div>
-        <button class="btn" style="background: #27273a; color: #fff; margin-top: 24px; width: 100%;" onclick="alert('결제 시스템 연동 준비 중입니다!'); closeModal();">충전하기</button>
+        <button class="btn" style="background: #27273a; color: #fff; margin-top: 24px; width: 100%;" onclick="requestTossPayment('스타터 팩', 3900, 300)">충전하기</button>
       </div>
 
-      <!-- 2. 크리에이터 팩 (상업적 이용 가능) -->
+      <!-- 2. 크리에이터 팩 -->
       <div style="background: #181820; border: 1px solid var(--accent-purple); border-radius: 16px; padding: 24px; display: flex; flex-direction: column; justify-content: space-between; position: relative;">
         <div style="position: absolute; top: -12px; right: 20px; background: var(--accent-purple); color: #fff; font-size: 0.65rem; font-weight: bold; padding: 3px 10px; border-radius: 10px; letter-spacing: 0.5px;">인기 추천</div>
         <div>
@@ -544,10 +546,10 @@
             <div style="color: #a78bfa; font-weight: bold;">🚀 초고속 우선순위 렌더링 배정</div>
           </div>
         </div>
-        <button class="btn btn-secondary" style="margin-top: 24px; width: 100%;" onclick="alert('결제 시스템 연동 준비 중입니다!'); closeModal();">충전하기</button>
+        <button class="btn btn-secondary" style="margin-top: 24px; width: 100%;" onclick="requestTossPayment('크리에이터 팩', 9900, 1000)">충전하기</button>
       </div>
 
-      <!-- 3. 프로 팩 (35% 할인특가 + 상업적 이용 가능) -->
+      <!-- 3. 프로 팩 (35% 할인특가) -->
       <div style="background: linear-gradient(135deg, #181824 0%, #141026 100%); border: 1px solid var(--accent-purple); border-radius: 16px; padding: 24px; display: flex; flex-direction: column; justify-content: space-between; position: relative; box-shadow: 0 0 20px rgba(157,78,221,0.2);">
         <div style="position: absolute; top: -12px; right: 20px; background: #ef4444; color: #fff; font-size: 0.65rem; font-weight: bold; padding: 3px 10px; border-radius: 10px; letter-spacing: 0.5px;">🔥 35% 할인특가</div>
         <div>
@@ -566,7 +568,7 @@
             <div style="color: #a78bfa; font-weight: bold;">💎 VIP 전용 고객 지원 및 무제한 보관</div>
           </div>
         </div>
-        <button class="btn btn-secondary" style="background: linear-gradient(135deg, #9d4edd, #7c3aed); margin-top: 24px; width: 100%;" onclick="alert('결제 시스템 연동 준비 중입니다!'); closeModal();">할인가로 충전하기</button>
+        <button class="btn btn-secondary" style="background: linear-gradient(135deg, #9d4edd, #7c3aed); margin-top: 24px; width: 100%;" onclick="requestTossPayment('프로 팩', 15900, 3000)">할인가로 충전하기</button>
       </div>
 
     </div>
@@ -670,6 +672,40 @@
       .from('profiles')
       .update({ credits: credits })
       .eq('id', currentUser.id);
+  }
+
+  // 💳 토스페이먼츠 결제 요청 함수 (테스트 연동)
+  async function requestTossPayment(packageName, amount, creditAmount) {
+    if (!currentUser) {
+      alert('로그인 후 이용해주세요.');
+      return;
+    }
+
+    try {
+      // 토스페이먼츠 테스트 클라이언트 키
+      const clientKey = "test_ck_D5GePWvyJnrK0W0k6q8gLzN97Eoq";
+      const tossPayments = TossPayments(clientKey);
+
+      // 주문 고유 번호 생성
+      const orderId = "ORDER_" + Date.now() + "_" + Math.random().toString(36).substring(2, 7);
+
+      closeModal();
+      document.getElementById('statusText').innerText = `💳 ${packageName} 결제창을 호출하는 중...`;
+
+      // 토스페이먼츠 결제창 호출 (테스트 모드)
+      tossPayments.requestPayment('카드', {
+        amount: amount,
+        orderId: orderId,
+        orderName: `NOIR STUDIO - ${packageName} (${creditAmount} CR)`,
+        customerName: currentUser.email || '크리에이터',
+        successUrl: window.location.origin + `/payment-success?credits=${creditAmount}&amount=${amount}`,
+        failUrl: window.location.origin + `/payment-fail`,
+      });
+
+    } catch (err) {
+      console.error("결제 요청 에러:", err);
+      alert("결제 중 오류가 발생했습니다: " + err.message);
+    }
   }
 
   async function handleSocialLogin(providerName) {
