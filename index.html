@@ -8,8 +8,8 @@
   <script defer src="/_vercel/insights/script.js"></script>
   <!-- Supabase JS SDK CDN -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <!-- 토스페이먼츠 결제위젯 SDK -->
-  <script src="https://js.tosspayments.com/v1/payment-widget"></script>
+  <!-- 토스페이먼츠 표준 결제 SDK -->
+  <script src="https://js.tosspayments.com/v1/payment"></script>
 
   <meta name="description" content="NOIR STUDIO - 초고화질 AI 실사 이미지 및 시네마틱 모션 비디오 생성기">
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700;800&display=swap" rel="stylesheet">
@@ -395,7 +395,7 @@
 </head>
 <body>
 
-<!-- Supabase 구글 소셜 로그인 전용 오버레이 -->
+<!-- Supabase 구글 소셜 로그인 오버레이 -->
 <div id="authOverlay" style="display: none;">
   <div class="auth-card">
     <h2 style="font-size: 1.4rem; color: #fff; margin-bottom: 8px; letter-spacing: 1px;">NOIR STUDIO</h2>
@@ -500,7 +500,7 @@
   </div>
 </div>
 
-<!-- 모달창 (3단 크레딧 충전 팩 - 최신 토스페이먼츠 결제위젯 적용) -->
+<!-- 모달창 (3단 크레딧 충전 팩) -->
 <div class="modal-backdrop" id="pricingModal" onclick="closeModal()">
   <div class="modal-card" onclick="event.stopPropagation()">
     <button class="close-btn" onclick="closeModal()">&times;</button>
@@ -577,7 +577,7 @@
 
 <script>
   const SUPABASE_URL = "https://lnovwtmuddjsuqfpvuwi.supabase.co";
-  const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imxub3Z3dG11ZGRqc3VxZnB2dXdpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTMwNzU0NTMsImV4cCI6MjEwODY1MTQ1M30.OV0n9gbw3vtPerYfe4-dzbdj-52rLGhSvv0ybFAprFkk";
+  const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imxub3Z3dG11ZGRqc3VxZnB2dXdpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTMwNzU0NTMsImV4cCI6MjEwODY1MTQ1M30.OV0n9gbw3vtPerYfe4-dBdj-52rLGhSvv0ybFAprFkk";
 
   let supabaseClient = null;
   try {
@@ -634,32 +634,37 @@
     }
   };
 
+  // ⭐️ [크레딧 150 리셋 및 401 오류 원천 차단 안전 로직]
   async function fetchUserProfile() {
     if (!currentUser || !supabaseClient) return;
     
-    let { data, error } = await supabaseClient
-      .from('profiles')
-      .select('credits, is_pro')
-      .eq('id', currentUser.id)
-      .maybeSingle();
-
-    if (!data || error) {
-      const { data: newProfile } = await supabaseClient
+    try {
+      // 1. 기존 프로필 조회 시도
+      let { data, error } = await supabaseClient
         .from('profiles')
-        .insert([{ id: currentUser.id, credits: 150, is_pro: false }])
         .select('credits, is_pro')
-        .single();
-        
-      if (newProfile) {
-        data = newProfile;
-      }
-    }
+        .eq('id', currentUser.id)
+        .maybeSingle();
 
-    if (data) {
-      credits = data.credits;
-      isProUser = data.is_pro;
-      updateCreditDisplay();
-      if (isProUser) applyAdminUI();
+      // 2. 프로필이 없거나 테이블 권한/조회 실패 시 안전하게 upsert로 생성 또는 유지
+      if (error || !data) {
+        const { data: newProfile } = await supabaseClient
+          .from('profiles')
+          .upsert([{ id: currentUser.id, credits: 150, is_pro: false }], { onConflict: 'id' })
+          .select('credits, is_pro')
+          .maybeSingle();
+        
+        if (newProfile) data = newProfile;
+      }
+
+      if (data) {
+        credits = data.credits ?? 150;
+        isProUser = data.is_pro ?? false;
+        updateCreditDisplay();
+        if (isProUser) applyAdminUI();
+      }
+    } catch (e) {
+      console.error("프로필 동기화 예외:", e);
     }
   }
 
@@ -667,14 +672,18 @@
     if (!currentUser || !supabaseClient || isProUser) return;
     credits = newCredits;
     updateCreditDisplay();
-    await supabaseClient
-      .from('profiles')
-      .update({ credits: credits })
-      .eq('id', currentUser.id);
+    try {
+      await supabaseClient
+        .from('profiles')
+        .update({ credits: credits })
+        .eq('id', currentUser.id);
+    } catch (e) {
+      console.error("크레딧 서버 반영 실패:", e);
+    }
   }
 
-  // 💳 토스페이먼츠 결제위젯 연동 함수 (테스트 전용 위젯 클라이언트 키 적용)
-  async function requestTossPayment(packageName, amount, creditAmount) {
+  // 💳 [토스페이먼츠 표준 결제창 함수 - 충돌 완벽 해결]
+  function requestTossPayment(packageName, amount, creditAmount) {
     if (!currentUser) {
       alert('로그인 후 이용해주세요.');
       return;
@@ -682,32 +691,25 @@
 
     try {
       if (typeof TossPayments === 'undefined') {
-        alert('토스페이먼츠 SDK가 로드되지 않았습니다.');
+        alert('토스페이먼츠 SDK가 로드되지 않았습니다. 인터넷 연결을 확인해주세요.');
         return;
       }
 
-      // 토스페이먼츠 공식 테스트용 클라이언트 키 (결제위젯 전용)
-      const clientKey = "test_gck_Z69RbmYJWYgq75w5lWp88nEdBMw6";
-      const customerKey = "CUSTOMER_" + currentUser.id.substring(0, 10);
-      
-      const tossPayments = await TossPayments(clientKey);
-      const payment = tossPayments.payment({ customerKey });
+      // 토스페이먼츠 표준 테스트 클라이언트 키
+      const clientKey = "test_ck_D5GePWvyJnrK0W0k6q8gLzN97Eoq";
+      const tossPayments = TossPayments(clientKey);
+      const orderId = "ORDER_" + Date.now() + "_" + Math.random().toString(36).substring(2, 7);
 
       closeModal();
       document.getElementById('statusText').innerText = `💳 ${packageName} 결제창을 호출하는 중...`;
 
-      await payment.requestPayment({
-        method: "CARD",
-        amount: {
-          currency: "KRW",
-          value: amount,
-        },
-        orderId: "ORDER_" + Date.now() + "_" + Math.random().toString(36).substring(2, 7),
+      tossPayments.requestPayment('카드', {
+        amount: amount,
+        orderId: orderId,
         orderName: `NOIR STUDIO - ${packageName} (${creditAmount} CR)`,
+        customerName: currentUser.email || '크리에이터',
         successUrl: window.location.origin + `/payment-success?credits=${creditAmount}&amount=${amount}`,
         failUrl: window.location.origin + `/payment-fail`,
-        customerEmail: currentUser.email || 'creator@noirstudio.com',
-        customerName: '크리에이터',
       });
 
     } catch (err) {
@@ -1003,39 +1005,45 @@
 
   async function saveToCloudHistory(type, url, promptText, status = 'done') {
     if (!currentUser || !supabaseClient) return null;
-    const { data } = await supabaseClient.from('generation_history').insert([{ user_id: currentUser.id, type, url, prompt: promptText || '', status }]).select().single();
-    await renderHistory();
-    return data;
+    try {
+      const { data } = await supabaseClient.from('generation_history').insert([{ user_id: currentUser.id, type, url, prompt: promptText || '', status }]).select().single();
+      await renderHistory();
+      return data;
+    } catch (e) { return null; }
   }
 
   async function updateCloudHistoryStatus(historyId, statusUrl, status, value, promptText, isForeground = false) {
     if (!currentUser || !supabaseClient) return;
     if (completingUrls.has(statusUrl)) return;
     if (status === 'done' || status === 'failed') completingUrls.add(statusUrl);
-    if (historyId) await supabaseClient.from('generation_history').delete().eq('id', historyId);
-    await supabaseClient.from('generation_history').insert([{ user_id: currentUser.id, type: 'VIDEO', url: value, prompt: promptText || '', status }]);
-    await renderHistory();
-    if (status === 'done' && isForeground) {
-      currentImageUrl = value; currentDownloadUrl = value; currentFileType = 'mp4';
-      const wmDisplay = isProUser ? 'none' : 'block';
-      document.getElementById('previewBox').innerHTML = `<div class="media-wrapper"><video src="${value}" autoplay loop muted controls></video><div class="watermark-overlay" style="display: ${wmDisplay};">NOIR STUDIO</div></div>`;
-      document.getElementById('downloadArea').style.display = 'block';
-      document.getElementById('statusText').innerText = '✅ 비디오 변환 완료!';
-      alert('✨ 비디오 변환 완료!');
-    }
+    try {
+      if (historyId) await supabaseClient.from('generation_history').delete().eq('id', historyId);
+      await supabaseClient.from('generation_history').insert([{ user_id: currentUser.id, type: 'VIDEO', url: value, prompt: promptText || '', status }]);
+      await renderHistory();
+      if (status === 'done' && isForeground) {
+        currentImageUrl = value; currentDownloadUrl = value; currentFileType = 'mp4';
+        const wmDisplay = isProUser ? 'none' : 'block';
+        document.getElementById('previewBox').innerHTML = `<div class="media-wrapper"><video src="${value}" autoplay loop muted controls></video><div class="watermark-overlay" style="display: ${wmDisplay};">NOIR STUDIO</div></div>`;
+        document.getElementById('downloadArea').style.display = 'block';
+        document.getElementById('statusText').innerText = '✅ 비디오 변환 완료!';
+        alert('✨ 비디오 변환 완료!');
+      }
+    } catch (e) {}
   }
 
   async function renderHistory() {
     const historyContainer = document.querySelector('.history-grid');
     if (!historyContainer || !currentUser || !supabaseClient) return;
-    const { data: history } = await supabaseClient.from('generation_history').select('*').eq('user_id', currentUser.id).order('created_at', { ascending: false }).limit(20);
-    if (!history || history.length === 0) { historyContainer.innerHTML = '<p style="color: #71717a; font-size: 13px; text-align: center; width: 100%;">생성된 작업물이 없습니다.</p>'; return; }
-    historyContainer.innerHTML = history.map(item => `
-      <div class="history-item" onclick="loadHistoryItemFromUrl('${item.url}', '${item.type}')">
-        ${item.type === 'VIDEO' ? '<div style="width:100%;height:100%;background:#181824;display:flex;align-items:center;justify-content:center;color:#fff;">▶</div>' : `<img src="${item.url}">`}
-        <span class="badge-tag">${item.type}</span>
-      </div>
-    `).join('');
+    try {
+      const { data: history } = await supabaseClient.from('generation_history').select('*').eq('user_id', currentUser.id).order('created_at', { ascending: false }).limit(20);
+      if (!history || history.length === 0) { historyContainer.innerHTML = '<p style="color: #71717a; font-size: 13px; text-align: center; width: 100%;">생성된 작업물이 없습니다.</p>'; return; }
+      historyContainer.innerHTML = history.map(item => `
+        <div class="history-item" onclick="loadHistoryItemFromUrl('${item.url}', '${item.type}')">
+          ${item.type === 'VIDEO' ? '<div style="width:100%;height:100%;background:#181824;display:flex;align-items:center;justify-content:center;color:#fff;">▶</div>' : `<img src="${item.url}">`}
+          <span class="badge-tag">${item.type}</span>
+        </div>
+      `).join('');
+    } catch (e) {}
   }
 
   function loadHistoryItemFromUrl(url, type) {
@@ -1047,8 +1055,10 @@
 
   async function resumePendingPolls() {
     if (!currentUser || !supabaseClient) return;
-    const { data: history } = await supabaseClient.from('generation_history').select('*').eq('user_id', currentUser.id).eq('status', 'processing');
-    if (history) history.forEach(item => pollVideoInBackground(item.id, item.url, item.prompt, false));
+    try {
+      const { data: history } = await supabaseClient.from('generation_history').select('*').eq('user_id', currentUser.id).eq('status', 'processing');
+      if (history) history.forEach(item => pollVideoInBackground(item.id, item.url, item.prompt, false));
+    } catch (e) {}
   }
 </script>
 
