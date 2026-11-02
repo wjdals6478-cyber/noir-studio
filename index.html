@@ -515,7 +515,7 @@
     <p>PHOTOREALISTIC AI & MOTION GENERATOR</p>
     <div class="header-badges">
       <div class="credit-badge" onclick="openModal()">⚡ 잔여 크레딧: <span id="creditSpan">150</span> CR</div>
-      <div class="plan-badge" id="planBadge" onclick="handlePlanBadgeClick()">FREE PLAN</div>
+      <div class="plan-badge" id="planBadge">FREE PLAN</div>
       <div class="guide-badge" onclick="openGuideModal()">📖 이용가이드</div>
       <div class="logout-badge" onclick="handleLogout()">로그아웃</div>
     </div>
@@ -734,10 +734,6 @@
   const activePolls = new Set();
   const completingUrls = new Set();
 
-  const ADMIN_SECRET_KEY = "noir2026";
-  let planClickCount = 0;
-  let planClickTimer = null;
-
   window.onload = async () => {
     if (supabaseClient) {
       supabaseClient.auth.onAuthStateChange(async (event, session) => {
@@ -815,7 +811,7 @@
     }
   }
 
-  // 💳 [토스페이먼츠 정식 결제창 연동 함수 - 400 에러 방지 Number 적용]
+  // 💳 [토스페이먼츠 정식 결제창 연동 함수]
   function requestTossPayment(packageName, amount, creditAmount) {
     if (!currentUser) {
       alert('로그인 후 이용해주세요.');
@@ -838,7 +834,7 @@
       const tossPayments = TossPayments(clientKey);
       
       const orderId = "ORD" + Date.now() + Math.floor(Math.random() * 1000);
-      const numericAmount = Number(amount); // 💡 금액을 숫자로 명시하여 400 Bad Request 방지
+      const numericAmount = Number(amount);
 
       closeModal();
       document.getElementById('statusText').innerText = `💳 ${packageName} 결제창을 호출하는 중...`;
@@ -886,20 +882,6 @@
   let currentDownloadUrl = '';
   let currentFileType = 'png';
 
-  function handlePlanBadgeClick() {
-    planClickCount++;
-    if (planClickTimer) clearTimeout(planClickTimer);
-    if (planClickCount >= 5) {
-      planClickCount = 0;
-      simulateUpgrade();
-      return;
-    }
-    planClickTimer = setTimeout(() => {
-      planClickCount = 0;
-      openModal();
-    }, 400);
-  }
-
   const randomPrompts = [
     "A lonely astronaut standing on a glowing neon planet surface, cinematic, 8k",
     "A majestic dragon resting inside a futuristic dark palace, volumetric light",
@@ -908,7 +890,7 @@
   ];
 
   function applyAdminUI() {
-    document.getElementById('planBadge').innerText = "PRO / ADMIN (무제한)";
+    document.getElementById('planBadge').innerText = "PRO (무제한)";
     document.getElementById('planBadge').style.background = "rgba(16, 185, 129, 0.2)";
     document.getElementById('planBadge').style.borderColor = "#10b981";
     document.getElementById('planBadge').style.color = "#a7f3d0";
@@ -928,7 +910,6 @@
   function openGuideModal() { document.getElementById('guideModal').style.display = 'flex'; }
   function closeGuideModal() { document.getElementById('guideModal').style.display = 'none'; }
 
-  // 이용약관, 개인정보처리방침, 환불정책 전문 모달 출력 함수
   function openPolicyModal(type) {
     const modal = document.getElementById('policyModal');
     const titleEl = document.getElementById('policyModalTitle');
@@ -954,7 +935,7 @@
     } else if (type === 'privacy') {
       titleEl.innerText = "개인정보처리방침";
       contentEl.innerText = 
-        "누아르 스튜디오(NOIR STUDIO)(이하 '회사')는 「개인정보 보호법」에 따라 이용자의 개인정보 보호 및 권익을 보호하고 개인정보와 관련한 이용자의 고충을 원활하게 처리할 수 다음과 같은 처리 방침을 두고 있습니다.\n\n" +
+        "누아르 스튜디오(NOIR STUDIO)(이하 '회사')는 「개인정보 보호법」에 따라 이용자의 개인정보 보호 및 권익을 보호하고 개인정보와 관련한 이용자의 고충을 원활하게 처리할 수 있도록 다음과 같은 처리 방침을 두고 있습니다.\n\n" +
         "1. 개인정보의 수집 및 이용 목적\n" +
         "회사는 회원 가입, 원활한 고객 상담, 유료 크레딧 결제 및 환불 처리를 위하여 최소한의 개인정보를 수집합니다.\n\n" +
         "2. 수집하는 개인정보의 항목\n" +
@@ -986,23 +967,6 @@
 
   function closePolicyModal() {
     document.getElementById('policyModal').style.display = 'none';
-  }
-
-  async function simulateUpgrade() {
-    const inputKey = prompt("관리자 키를 입력해 주세요.");
-    if (inputKey === null) return;
-    if (inputKey.trim() === ADMIN_SECRET_KEY) {
-      isProUser = true;
-      applyAdminUI();
-      if (currentUser && supabaseClient) {
-        await supabaseClient.from('profiles').update({ is_pro: true }).eq('id', currentUser.id);
-      }
-      alert("⚡ [관리자 인증 성공] 무제한 모드가 활성화되었습니다.");
-      closeModal();
-      updateCreditDisplay();
-    } else {
-      alert("키가 올바르지 않습니다.");
-    }
   }
 
   function setStarterPrompt(p) { document.getElementById('prompt').value = p; }
