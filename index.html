@@ -422,12 +422,12 @@
       background: #14141c;
       border: 1px solid #2e2e3e;
       border-radius: 20px;
-      width: 90%;
-      max-width: 800px;
+      width: 92%;
+      max-width: 1100px;
       padding: 40px 30px;
       box-shadow: 0 20px 60px rgba(0,0,0,0.9);
       position: relative;
-      max-height: 85vh;
+      max-height: 90vh;
       overflow-y: auto;
     }
     .close-btn {
@@ -633,7 +633,7 @@
   </footer>
 </div>
 
-<!-- 모달창 (3단 크레딧 충전 팩) -->
+<!-- 모달창 (3단 크레딧 충전 팩 - 가로 3열 정렬 최적화) -->
 <div class="modal-backdrop" id="pricingModal" onclick="closeModal()">
   <div class="modal-card" onclick="event.stopPropagation()">
     <button class="close-btn" onclick="closeModal()">&times;</button>
@@ -643,10 +643,10 @@
       <p style="color: #a1a1aa; font-size: 0.85rem;">필요한 만큼 충전하고, 더 강력한 크리에이터 혜택을 누려보세요.</p>
     </div>
 
-    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px; margin-bottom: 10px;">
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px; margin-bottom: 10px;">
       
       <!-- 1. 스타터 팩 -->
-      <div style="background: #181820; border: 1px solid #272730; border-radius: 16px; padding: 24px; display: flex; flex-direction: column; justify-content: space-between;">
+      <div style="background: #181820; border: 1px solid #272730; border-radius: 16px; padding: 20px; display: flex; flex-direction: column; justify-content: space-between;">
         <div>
           <div style="font-size: 0.75rem; color: #a1a1aa; text-transform: uppercase; margin-bottom: 4px;">Light Pack</div>
           <div style="font-size: 1.1rem; font-weight: bold; color: #fff; margin-bottom: 12px;">스타터 팩</div>
@@ -664,7 +664,7 @@
       </div>
 
       <!-- 2. 크리에이터 팩 -->
-      <div style="background: #181820; border: 1px solid var(--accent-purple); border-radius: 16px; padding: 24px; display: flex; flex-direction: column; justify-content: space-between; position: relative;">
+      <div style="background: #181820; border: 1px solid var(--accent-purple); border-radius: 16px; padding: 20px; display: flex; flex-direction: column; justify-content: space-between; position: relative;">
         <div style="position: absolute; top: -12px; right: 20px; background: var(--accent-purple); color: #fff; font-size: 0.65rem; font-weight: bold; padding: 3px 10px; border-radius: 10px; letter-spacing: 0.5px;">인기 추천</div>
         <div>
           <div style="font-size: 0.75rem; color: #d8b4fe; text-transform: uppercase; margin-bottom: 4px;">Best Value</div>
@@ -683,7 +683,7 @@
       </div>
 
       <!-- 3. 프로 팩 -->
-      <div style="background: linear-gradient(135deg, #181824 0%, #141026 100%); border: 1px solid var(--accent-purple); border-radius: 16px; padding: 24px; display: flex; flex-direction: column; justify-content: space-between; position: relative; box-shadow: 0 0 20px rgba(157,78,221,0.2);">
+      <div style="background: linear-gradient(135deg, #181824 0%, #141026 100%); border: 1px solid var(--accent-purple); border-radius: 16px; padding: 20px; display: flex; flex-direction: column; justify-content: space-between; position: relative; box-shadow: 0 0 20px rgba(157,78,221,0.2);">
         <div style="position: absolute; top: -12px; right: 20px; background: #ef4444; color: #fff; font-size: 0.65rem; font-weight: bold; padding: 3px 10px; border-radius: 10px; letter-spacing: 0.5px;">🔥 35% 할인특가</div>
         <div>
           <div style="font-size: 0.75rem; color: #d8b4fe; text-transform: uppercase; margin-bottom: 4px;">Pro Pack</div>
@@ -815,7 +815,7 @@
     }
   }
 
-  // 💳 [토스페이먼츠 정식 결제창 연동 함수]
+  // 💳 [토스페이먼츠 정식 결제창 연동 함수 - 400 에러 방지 Number 적용]
   function requestTossPayment(packageName, amount, creditAmount) {
     if (!currentUser) {
       alert('로그인 후 이용해주세요.');
@@ -838,15 +838,16 @@
       const tossPayments = TossPayments(clientKey);
       
       const orderId = "ORD" + Date.now() + Math.floor(Math.random() * 1000);
+      const numericAmount = Number(amount); // 💡 금액을 숫자로 명시하여 400 Bad Request 방지
 
       closeModal();
       document.getElementById('statusText').innerText = `💳 ${packageName} 결제창을 호출하는 중...`;
 
       tossPayments.requestPayment('카드', {
-        amount: amount,
+        amount: numericAmount,
         orderId: orderId,
         orderName: `NOIR STUDIO - ${packageName} (${creditAmount} CR)`,
-        successUrl: window.location.origin + `/payment-success?credits=${creditAmount}&amount=${amount}`,
+        successUrl: window.location.origin + `/payment-success?credits=${creditAmount}&amount=${numericAmount}`,
         failUrl: window.location.origin + `/payment-fail`,
         customerName: currentUser.email ? currentUser.email.split('@')[0] : '크리에이터'
       }).catch(function (error) {
@@ -953,7 +954,7 @@
     } else if (type === 'privacy') {
       titleEl.innerText = "개인정보처리방침";
       contentEl.innerText = 
-        "누아르 스튜디오(NOIR STUDIO)(이하 '회사')는 「개인정보 보호법」에 따라 이용자의 개인정보 보호 및 권익을 보호하고 개인정보와 관련한 이용자의 고충을 원활하게 처리할 수 있도록 다음과 같은 처리 방침을 두고 있습니다.\n\n" +
+        "누아르 스튜디오(NOIR STUDIO)(이하 '회사')는 「개인정보 보호법」에 따라 이용자의 개인정보 보호 및 권익을 보호하고 개인정보와 관련한 이용자의 고충을 원활하게 처리할 수 다음과 같은 처리 방침을 두고 있습니다.\n\n" +
         "1. 개인정보의 수집 및 이용 목적\n" +
         "회사는 회원 가입, 원활한 고객 상담, 유료 크레딧 결제 및 환불 처리를 위하여 최소한의 개인정보를 수집합니다.\n\n" +
         "2. 수집하는 개인정보의 항목\n" +
