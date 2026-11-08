@@ -548,7 +548,7 @@
       </div>
       <input type="text" id="prompt" placeholder="예: A luxury sports car driving at night..." value="A cyberpunk girl, 8k resolution, photorealistic raw photo">
       <div class="prompt-tip">
-        💡 <b>작성 팁:</b> 단어만 적기보다는 구체적인 배경, 조명, 화질을 영어로 적어주시면 훨씬 뛰어난 실사 결과물이 생성됩니다. (짧게 입력해도 자동 보정됩니다!)
+        💡 <b>작성 팁:</b> 구체적인 배경, 조명, 화질을 영어로 상세히 적어주셔야 높은 퀄리티의 실사 결과물이 생성됩니다.
       </div>
     </div>
 
@@ -794,12 +794,16 @@
     if (!currentUser || !supabaseClient || isProUser) return true;
     try {
       const { error } = await supabaseClient.rpc('deduct_credits', { user_id: currentUser.id, amount: amount });
-      if (error) throw error;
+      if (error) {
+        const newCredits = Math.max(0, credits - amount);
+        await supabaseClient.from('profiles').update({ credits: newCredits }).eq('id', currentUser.id);
+      }
       await fetchUserProfile();
       return true;
     } catch (e) {
-      console.error("크레딧 차감 실패:", e);
-      return false;
+      credits = Math.max(0, credits - amount);
+      updateCreditDisplay();
+      return true;
     }
   }
 
@@ -807,10 +811,14 @@
     if (!currentUser || !supabaseClient || isProUser || amount <= 0) return;
     try {
       const { error } = await supabaseClient.rpc('refund_credits', { user_id: currentUser.id, amount: amount });
-      if (error) throw error;
+      if (error) {
+        const newCredits = credits + amount;
+        await supabaseClient.from('profiles').update({ credits: newCredits }).eq('id', currentUser.id);
+      }
       await fetchUserProfile();
     } catch (e) {
-      console.error("크레딧 환불 실패:", e);
+      credits += amount;
+      updateCreditDisplay();
     }
   }
 
@@ -990,18 +998,11 @@
       activeCost = 0;
     }
 
-    let promptInput = document.getElementById('prompt').value.trim();
+    const promptInput = document.getElementById('prompt').value.trim();
     if (!promptInput) {
       if (activeCost > 0 && !isProUser) { await refundServerCredits(activeCost); activeCost = 0; }
       alert('프롬프트를 입력해주세요.');
       return;
-    }
-
-    // 💡 짧은 키워드(예: "스포츠카")만 입력했을 때 자동으로 실사 고화질 프롬프트로 확장해주는 스마트 보정 로직
-    if (promptInput.length < 25 && !promptInput.toLowerCase().includes('photorealistic') && !promptInput.toLowerCase().includes('8k')) {
-      promptInput = `A highly detailed, photorealistic raw photo of ${promptInput}, cinematic lighting, 8k resolution, masterpiece`;
-    } else {
-      promptInput += ", highly detailed, photorealistic, 8k resolution";
     }
 
     isGenerating = true;
@@ -1205,6 +1206,22 @@
         await renderHistory();
       } catch (e) {
         alert('삭제 오류: ' + e.message);
+      }
+    }
+  }
+
+  async function clearHistory() {
+    if (!currentUser || !supabaseClient) return;
+    if (confirm('클라우드 보관함의 모든 기록을 삭제하시겠습니까?')) {
+      try {
+        const { error } = await supabaseClient
+          .from('generation_history')
+          .delete()
+          .eq('user_id', currentUser.id);
+        if (error) throw error;
+        await renderHistory();
+      } catch (e) {
+        alert('기록 삭제 중 오류가 발생했습니다: ' + e.message);
       }
     }
   }
