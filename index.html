@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>NOIR STUDIO - Free Edition</title>
+  <title>NOIR STUDIO</title>
   
   <script defer src="/_vercel/insights/script.js"></script>
   <!-- Supabase JS SDK CDN -->
@@ -11,7 +11,7 @@
   <!-- 토스페이먼츠 표준 결제 SDK -->
   <script src="https://js.tosspayments.com/v1/payment"></script>
 
-  <meta name="description" content="NOIR STUDIO - 무료 오픈소스 AI 이미지 및 비디오 생성기">
+  <meta name="description" content="NOIR STUDIO - Free Open-Source AI Image & Video Generator">
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700;800&display=swap" rel="stylesheet">
 
   <style>
@@ -109,19 +109,6 @@
       border-color: var(--accent-purple);
       color: #e9d5ff;
       font-weight: 600;
-    }
-
-    .beta-notice {
-      grid-column: 1 / -1;
-      background: rgba(157, 78, 221, 0.06);
-      border: 1px solid rgba(157, 78, 221, 0.2);
-      padding: 12px 16px;
-      border-radius: 12px;
-      font-size: 0.78rem;
-      color: #d8b4fe;
-      display: flex;
-      align-items: center;
-      gap: 10px;
     }
 
     .panel-left { display: flex; flex-direction: column; gap: 16px; }
@@ -403,19 +390,6 @@
       text-decoration: underline;
       color: #fff;
     }
-    .footer-info {
-      display: flex;
-      flex-direction: column;
-      gap: 6px;
-      color: #a1a1aa;
-      font-size: 0.73rem;
-      line-height: 1.5;
-    }
-    .footer-info-row {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 16px;
-    }
 
     .modal-backdrop {
       position: fixed;
@@ -486,8 +460,8 @@
   <div class="modal-card" onclick="event.stopPropagation()">
     <button class="close-btn" onclick="closeGuideModal()">&times;</button>
     <div style="text-align: center; margin-bottom: 24px;">
-      <h2 style="font-size: 1.4rem; color: #fff; margin-bottom: 6px;">📖 이용 가이드 (Free Edition)</h2>
-      <p style="color: #a1a1aa; font-size: 0.85rem;">무료 오픈소스 모델을 활용한 AI 이미지 생성 기능을 안내해 드립니다.</p>
+      <h2 style="font-size: 1.4rem; color: #fff; margin-bottom: 6px;">📖 이용 가이드</h2>
+      <p style="color: #a1a1aa; font-size: 0.85rem;">NOIR STUDIO 오픈 소스 에디션 가이드</p>
     </div>
   </div>
 </div>
@@ -503,18 +477,13 @@
 <div class="container">
   <div class="header">
     <h1>NOIR STUDIO</h1>
-    <p>FREE OPEN-SOURCE AI GENERATOR</p>
+    <p>AI IMAGE & VIDEO GENERATOR</p>
     <div class="header-badges">
-      <div class="credit-badge" onclick="openModal()">⚡ 잔여 크레딧: <span id="creditSpan">100</span> CR</div>
-      <div class="plan-badge" id="planBadge">FREE PLAN</div>
+      <div class="credit-badge" onclick="openModal()">⚡ 잔여 크레딧: <span id="creditSpan">999</span> CR</div>
+      <div class="plan-badge" id="planBadge">UNLIMITED (무료오픈)</div>
       <div class="guide-badge" onclick="openGuideModal()">📖 이용가이드</div>
       <div class="logout-badge" onclick="handleLogout()">로그아웃</div>
     </div>
-  </div>
-
-  <div class="beta-notice">
-    <span>💡</span>
-    <div><b>무료 테스트 안내:</b> 현재 유료 API 대신 무료 퍼블릭 오픈소스 이미지 엔드포인트로 연결되어 비용 없이 테스트가 가능합니다.</div>
   </div>
 
   <div class="panel-left">
@@ -526,9 +495,9 @@
           <button class="action-text-btn" onclick="applyRandomPrompt()">🎲 무작위 추천</button>
         </div>
       </div>
-      <input type="text" id="prompt" placeholder="예: A futuristic city, cyberpunk style..." value="A cyberpunk girl, photorealistic portrait">
+      <input type="text" id="prompt" placeholder="예: A cinematic portrait of a cyberpunk..." value="A cinematic portrait of a cyberpunk woman, highly detailed">
       <div class="prompt-tip">
-        💡 <b>작성 팁:</b> 영문으로 상세히 적어주실수록 더 나은 결과물이 생성됩니다.
+        💡 <b>작성 팁:</b> 영문으로 상세히 적어주실수록 더 멋진 결과물이 생성됩니다.
       </div>
     </div>
 
@@ -550,27 +519,27 @@
     <div class="form-group">
       <label>용도별 화면 비율</label>
       <div class="ratio-grid">
-        <button class="ratio-btn active" data-ratio="16:9" onclick="setRatio('16:9')">16:9<br><span style="font-size:0.6rem; opacity:0.7">유튜브</span></button>
-        <button class="ratio-btn" data-ratio="9:16" onclick="setRatio('9:16')">9:16<br><span style="font-size:0.6rem; opacity:0.7">숏폼</span></button>
-        <button class="ratio-btn" data-ratio="1:1" onclick="setRatio('1:1')">1:1<br><span style="font-size:0.6rem; opacity:0.7">인스타</span></button>
-        <button class="ratio-btn" data-ratio="4:5" onclick="setRatio('4:5')">4:5<br><span style="font-size:0.6rem; opacity:0.7">포스트</span></button>
+        <button class="ratio-btn active" data-ratio="16:9" onclick="setRatio(1024, 576, event)">16:9<br><span style="font-size:0.6rem; opacity:0.7">유튜브</span></button>
+        <button class="ratio-btn" data-ratio="9:16" onclick="setRatio(576, 1024, event)">9:16<br><span style="font-size:0.6rem; opacity:0.7">숏폼</span></button>
+        <button class="ratio-btn" data-ratio="1:1" onclick="setRatio(768, 768, event)">1:1<br><span style="font-size:0.6rem; opacity:0.7">인스타</span></button>
+        <button class="ratio-btn" data-ratio="4:5" onclick="setRatio(768, 960, event)">4:5<br><span style="font-size:0.6rem; opacity:0.7">포스트</span></button>
       </div>
     </div>
 
     <div class="action-guide" id="actionGuide">
-      ⏱️ <b>안내:</b> 무료 퍼블릭 서버 환경으로 요청량에 따라 10~20초 정도 소요될 수 있습니다.
+      🚀 <b>서버 오픈 안내:</b> 비용 부담 없는 고속 퍼블릭 오픈소스 엔진으로 정식 서비스 중입니다.
     </div>
 
     <div class="btn-group">
-      <button class="btn btn-primary" onclick="generateDemoImage()">1. 무료 이미지 생성</button>
-      <button class="btn btn-secondary" id="vidBtn" onclick="generateDemoVideo()" disabled>2. 비디오 변환 (준비중)</button>
+      <button class="btn btn-primary" onclick="generateOpenImage()">이미지 생성하기</button>
+      <button class="btn btn-secondary" id="vidBtn" onclick="generateOpenVideo()">비디오 변환 (준비중)</button>
     </div>
 
     <div id="downloadArea" style="display: none; display: flex; flex-direction: column; gap: 8px;">
       <button class="btn btn-download" id="downloadBtn" onclick="downloadResultFile()">📥 결과물 다운로드</button>
     </div>
 
-    <div class="status-text" id="statusText">프롬프트를 입력하고 무료 생성을 진행하세요.</div>
+    <div class="status-text" id="statusText">프롬프트를 입력하고 생성을 시작하세요.</div>
   </div>
 
   <div class="panel-right">
@@ -591,7 +560,7 @@
     <div class="footer-top">
       <div>
         <h3 style="font-size: 0.9rem; color: #fff; margin-bottom: 2px;">누아르 스튜디오 (NOIR STUDIO)</h3>
-        <p style="color: #71717a; font-size: 0.72rem;">무료 오픈소스 AI 테스트 에디션</p>
+        <p style="color: #71717a; font-size: 0.72rem;">Open-Source AI Service Platform</p>
       </div>
       <div class="footer-links">
         <button onclick="openPolicyModal('terms')">이용약관</button>
@@ -606,8 +575,8 @@
   <div class="modal-card" onclick="event.stopPropagation()">
     <button class="close-btn" onclick="closeModal()">&times;</button>
     <div style="text-align: center; margin-bottom: 20px;">
-      <h2 style="font-size: 1.3rem; color: #fff;">무료 테스트 모드 안내</h2>
-      <p style="color: #a1a1aa; font-size: 0.8rem; margin-top: 6px;">현재 버전은 비용 부담 없는 오픈소스 퍼블릭 API를 활용하여 테스트 중입니다.</p>
+      <h2 style="font-size: 1.3rem; color: #fff;">무료 오픈 서비스 안내</h2>
+      <p style="color: #a1a1aa; font-size: 0.8rem; margin-top: 6px;">현재 NOIR STUDIO는 서버 비용 부담 없이 누구나 이용 가능한 오픈 에디션으로 운영되고 있습니다.</p>
     </div>
   </div>
 </div>
@@ -622,12 +591,11 @@
   } catch (e) {}
 
   let currentUser = null;
-  let isProUser = true; // 무료 테스트를 위해 기본 무제한 활성화
-  let credits = 999;
   let currentImageUrl = '';
   let currentDownloadUrl = '';
-  let currentFileType = 'png';
   let isGenerating = false;
+  let selectedWidth = 1024;
+  let selectedHeight = 576;
 
   const randomPrompts = [
     "A lonely astronaut standing on a glowing neon planet surface, cinematic, 8k",
@@ -680,15 +648,18 @@
   function closeGuideModal() { document.getElementById('guideModal').style.display = 'none'; }
   function openPolicyModal(type) {
     const modal = document.getElementById('policyModal');
-    document.getElementById('policyModalTitle').innerText = "안내";
-    document.getElementById('policyModalContent').innerText = "무료 테스트 오픈소스 에디션입니다.";
+    const titles = { terms: '이용약관', privacy: '개인정보처리방침', refund: '환불 및 취소정책' };
+    document.getElementById('policyModalTitle').innerText = titles[type] || '안내';
+    document.getElementById('policyModalContent').innerText = `${titles[type]} 내용입니다. (NOIR STUDIO 오픈 에디션)`;
     modal.style.display = 'flex';
   }
   function closePolicyModal() { document.getElementById('policyModal').style.display = 'none'; }
 
   function setStarterPrompt(p) { document.getElementById('prompt').value = p; }
   function clearPrompt() { document.getElementById('prompt').value = ''; document.getElementById('prompt').focus(); }
-  function setRatio(r) {
+  function setRatio(w, h, event) {
+    selectedWidth = w;
+    selectedHeight = h;
     document.querySelectorAll('.ratio-btn').forEach(btn => btn.classList.remove('active'));
     event.currentTarget.classList.add('active');
   }
@@ -702,8 +673,8 @@
     window.open(currentDownloadUrl, '_blank');
   }
 
-  // ★ 무료 퍼블릭 오픈소스 이미지 API (Pollinations.ai 등 활용) 호출 함수
-  async function generateDemoImage() {
+  // ★ 무료 퍼블릭 오픈소스 엔진을 통한 이미지 생성 함수 (서버 오픈용)
+  async function generateOpenImage() {
     if (isGenerating) return;
     const promptInput = document.getElementById('prompt').value.trim();
     if (!promptInput) { alert('프롬프트를 입력해주세요.'); return; }
@@ -714,22 +685,20 @@
     const downloadArea = document.getElementById('downloadArea');
     downloadArea.style.display = 'none';
 
-    status.innerText = '⚡ 무료 오픈소스 AI 이미지 생성 중... (잠시만 기다려주세요)';
+    status.innerText = '⚡ 오픈소스 AI 엔진으로 이미지 생성 중... (잠시만 기다려주세요)';
     preview.innerHTML = '<p style="color: #71717a;">퍼블릭 모델 렌더링 중...</p>';
 
     try {
-      // 퍼블릭 무료 이미지 생성 엔드포인트 활용 (Pollinations AI 공공 API)
       const encodedPrompt = encodeURIComponent(promptInput);
       const randomSeed = Math.floor(Math.random() * 1000000);
-      const freeImageUrl = `https://image.pollinations.ai/prompt/${encodedPrompt}?width=1024&height=576&seed=${randomSeed}&nologo=true`;
+      const freeImageUrl = `https://image.pollinations.ai/prompt/${encodedPrompt}?width=${selectedWidth}&height=${selectedHeight}&seed=${randomSeed}&nologo=true`;
 
-      // 이미지 로딩 테스트
       const img = new Image();
       img.src = freeImageUrl;
       await new Promise((resolve, reject) => {
         img.onload = resolve;
         img.onerror = reject;
-        setTimeout(reject, 25000); // 25초 타임아웃
+        setTimeout(reject, 25000);
       });
 
       isGenerating = false;
@@ -737,9 +706,9 @@
       currentDownloadUrl = freeImageUrl;
 
       preview.innerHTML = `<div class="media-wrapper"><img src="${freeImageUrl}"><div class="watermark-overlay">NOIR STUDIO</div></div>`;
-      status.innerText = '✅ 무료 이미지 생성 완료!';
+      status.innerText = '✅ 이미지 생성 완료!';
       downloadArea.style.display = 'block';
-      await saveToCloudHistory('IMG', freeImageUrl, promptInput, 'done');
+      await saveToCloudHistory('IMG', freeImageUrl, promptInput);
     } catch (err) {
       isGenerating = false;
       status.innerText = '❌ 생성 실패 또는 타임아웃 발생. 다시 시도해 주세요.';
@@ -747,8 +716,8 @@
     }
   }
 
-  async function generateDemoVideo() {
-    alert('비디오 변환 기능은 현재 무료 테스트 버전에서 준비 중입니다.');
+  async function generateOpenVideo() {
+    alert('비디오 변환 기능은 현재 오픈 에디션에서 준비 중입니다.');
   }
 
   async function saveToCloudHistory(type, url, promptText, status = 'done') {
@@ -762,7 +731,7 @@
 
   async function deleteHistoryItem(id) {
     if (!currentUser || !supabaseClient) return;
-    if (confirm('삭제하시겠습니까?')) {
+    if (confirm('기록을 삭제하시겠습니까?')) {
       await supabaseClient.from('generation_history').delete().eq('id', id);
       await renderHistory();
     }
