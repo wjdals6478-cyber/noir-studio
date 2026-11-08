@@ -548,7 +548,7 @@
       </div>
       <input type="text" id="prompt" placeholder="예: A luxury sports car driving at night..." value="A cyberpunk girl, 8k resolution, photorealistic raw photo">
       <div class="prompt-tip">
-        💡 <b>작성 팁:</b> 단어만 적기보다는 구체적인 배경, 조명, 화질을 영어로 적어주시면 훨씬 뛰어난 실사 결과물이 생성됩니다. (짧게 입력해도 자동 보정됩니다!)
+        💡 <b>작성 팁:</b> 구체적인 배경, 조명, 화질을 영어로 적어주시면 훨씬 뛰어난 실사 결과물이 생성됩니다.
       </div>
     </div>
 
@@ -790,30 +790,23 @@
     } catch (e) { console.error("프로필 동기화 예외:", e); }
   }
 
-  // 안전한 크레딧 직접 차감 (RPC 에러 회피형 직접 업데이트 지원)
   async function deductServerCredits(amount) {
     if (!currentUser || !supabaseClient || isProUser) return true;
     try {
-      // 우선 RPC 방식 시도
       const { error } = await supabaseClient.rpc('deduct_credits', { user_id: currentUser.id, amount: amount });
       if (error) {
-        // RPC가 없거나 잠금 에러 발생 시 직접 프로필 테이블 업데이트로 우회
         const newCredits = Math.max(0, credits - amount);
-        const { error: updateErr } = await supabaseClient.from('profiles').update({ credits: newCredits }).eq('id', currentUser.id);
-        if (updateErr) throw updateErr;
+        await supabaseClient.from('profiles').update({ credits: newCredits }).eq('id', currentUser.id);
       }
       await fetchUserProfile();
       return true;
     } catch (e) {
-      console.error("크레딧 차감 예외:", e);
-      // 에러가 나더라도 강제로 프론트 크레딧 반영 후 진행 허용
       credits = Math.max(0, credits - amount);
       updateCreditDisplay();
       return true;
     }
   }
 
-  // 안전한 크레딧 환불
   async function refundServerCredits(amount) {
     if (!currentUser || !supabaseClient || isProUser || amount <= 0) return;
     try {
@@ -826,7 +819,6 @@
     } catch (e) {
       credits += amount;
       updateCreditDisplay();
-      console.error("크레딧 환불 예외:", e);
     }
   }
 
@@ -1006,17 +998,11 @@
       activeCost = 0;
     }
 
-    let promptInput = document.getElementById('prompt').value.trim();
+    const promptInput = document.getElementById('prompt').value.trim();
     if (!promptInput) {
       if (activeCost > 0 && !isProUser) { await refundServerCredits(activeCost); activeCost = 0; }
       alert('프롬프트를 입력해주세요.');
       return;
-    }
-
-    if (promptInput.length < 25 && !promptInput.toLowerCase().includes('photorealistic') && !promptInput.toLowerCase().includes('8k')) {
-      promptInput = `A highly detailed, photorealistic raw photo of ${promptInput}, cinematic lighting, 8k resolution, masterpiece`;
-    } else if (!promptInput.toLowerCase().includes('photorealistic')) {
-      promptInput += ", highly detailed, photorealistic, 8k resolution";
     }
 
     isGenerating = true;
