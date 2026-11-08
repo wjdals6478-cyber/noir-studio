@@ -11,7 +11,7 @@
   <!-- 토스페이먼츠 표준 결제 SDK -->
   <script src="https://js.tosspayments.com/v1/payment"></script>
 
-  <meta name="description" content="NOIR STUDIO - AI 실사 이미지 및 시네마틱 모션 비디오 생성기">
+  <meta name="description" content="NOIR STUDIO - 초고화질 AI 실사 이미지 및 시네마틱 모션 비디오 생성기">
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700;800&display=swap" rel="stylesheet">
 
   <style>
@@ -491,7 +491,7 @@
     <button class="close-btn" onclick="closeGuideModal()">&times;</button>
     <div style="text-align: center; margin-bottom: 24px;">
       <h2 style="font-size: 1.4rem; color: #fff; margin-bottom: 6px;">📖 NOIR STUDIO 이용 가이드</h2>
-      <p style="color: #a1a1aa; font-size: 0.85rem;">AI 실사 이미지 및 모션 비디오 생성 방법을 안내해 드립니다.</p>
+      <p style="color: #a1a1aa; font-size: 0.85rem;">초고화질 AI 실사 이미지 및 모션 비디오 생성 방법을 안내해 드립니다.</p>
     </div>
     <div style="display: flex; flex-direction: column; gap: 16px; font-size: 0.85rem; color: #d1d5db; line-height: 1.6;">
       <div style="background: #181820; padding: 16px; border-radius: 12px; border: 1px solid #272730;">
@@ -499,13 +499,13 @@
         <p style="color: #a1a1aa; margin-top: 4px; font-size: 0.8rem;">원하는 장면을 영어 또는 한국어(예시 칩 활용)로 입력하고, 원하는 화면 비율(유튜브/숏폼 등)을 선택하세요.</p>
       </div>
       <div style="background: #181820; padding: 16px; border-radius: 12px; border: 1px solid #272730;">
-        <b style="color: #c084fc;">2단계: 이미지 생성 (10 CR)</b>
-        <p style="color: #a1a1aa; margin-top: 4px; font-size: 0.8rem;">[이미지 생성] 버튼을 누르면 AI 엔진이 약 5~10초 내에 결과물을 렌더링합니다.</p>
+        <b style="color: #c084fc;">2단계: 1단계 이미지 생성 (10 CR)</b>
+        <p style="color: #a1a1aa; margin-top: 4px; font-size: 0.8rem;">[이미지 생성] 버튼을 누르면 Flux.1 엔진이 약 5~10초 내에 초고화질 실사 결과물을 렌더링합니다.</p>
       </div>
       <div style="background: #181820; padding: 16px; border-radius: 12px; border: 1px solid #272730;">
-        <b style="color: #c084fc;">3단계: 비디오 변환 (50 CR)</b>
-        <p style="color: #a1a1aa; margin-top: 4px; font-size: 0.8rem;">생성된 이미지를 바탕으로 모션 비디오를 만들어보세요!<br>
-        <span style="font-size: 0.75rem; color: #a1a1aa; display:inline-block; margin-top:4px;">※ AI 비디오 변환 특성상 원본 이미지와 디테일이 일부 달라질 수 있습니다.</span></p>
+        <b style="color: #c084fc;">3단계: 2단계 비디오 변환 (50 CR)</b>
+        <p style="color: #a1a1aa; margin-top: 4px; font-size: 0.8rem;">생성된 이미지를 바탕으로 MiniMax 엔진을 통해 <b>5초 시네마틱 모션 비디오</b>를 만들어보세요!<br>
+        <span style="font-size: 0.75rem; color: #a1a1aa; display:inline-block; margin-top:4px;">※ AI 비디오 변환 특성상 원본 이미지와 디테일(인물 생김새나 배경 등)이 일부 달라지거나 전환될 수 있습니다.</span></p>
       </div>
     </div>
   </div>
@@ -534,7 +534,7 @@
 
   <div class="beta-notice">
     <span>⚡</span>
-    <div><b>크레딧 안내:</b> 매일 자정(00:00)에 크레딧이 100 CR로 자동 리셋됩니다.</div>
+    <div><b>무료 크레딧 안내:</b> 매일 자정(00:00)에 무료 크레딧이 100 CR로 자동 리셋됩니다.</div>
   </div>
 
   <div class="panel-left">
@@ -548,7 +548,7 @@
       </div>
       <input type="text" id="prompt" placeholder="예: A luxury sports car driving at night..." value="A cyberpunk girl, 8k resolution, photorealistic raw photo">
       <div class="prompt-tip">
-        💡 <b>작성 팁:</b> 구체적인 배경, 조명, 화질을 영어로 상세히 적어주셔야 높은 퀄리티의 결과물이 생성됩니다.
+        💡 <b>작성 팁:</b> 구체적인 배경, 조명, 화질을 영어로 상세히 적어주셔야 높은 퀄리티의 실사 결과물이 생성됩니다.
       </div>
     </div>
 
@@ -571,16 +571,16 @@
     <div class="form-group">
       <label>용도별 화면 비율</label>
       <div class="ratio-grid">
-        <button class="ratio-btn active" data-ratio="16:9" onclick="setRatio(1024, 576)">16:9<br><span style="font-size:0.6rem; opacity:0.7">유튜브</span></button>
-        <button class="ratio-btn" data-ratio="9:16" onclick="setRatio(576, 1024)">9:16<br><span style="font-size:0.6rem; opacity:0.7">숏폼/릴스</span></button>
-        <button class="ratio-btn" data-ratio="1:1" onclick="setRatio(768, 768)">1:1<br><span style="font-size:0.6rem; opacity:0.7">인스타</span></button>
-        <button class="ratio-btn" data-ratio="4:5" onclick="setRatio(768, 960)">4:5<br><span style="font-size:0.6rem; opacity:0.7">포스트</span></button>
+        <button class="ratio-btn active" data-ratio="16:9" onclick="setRatio('16:9', 'landscape_16_9')">16:9<br><span style="font-size:0.6rem; opacity:0.7">유튜브</span></button>
+        <button class="ratio-btn" data-ratio="9:16" onclick="setRatio('9:16', 'portrait_16_9')">9:16<br><span style="font-size:0.6rem; opacity:0.7">숏폼/릴스</span></button>
+        <button class="ratio-btn" data-ratio="1:1" onclick="setRatio('1:1', 'square')">1:1<br><span style="font-size:0.6rem; opacity:0.7">인스타</span></button>
+        <button class="ratio-btn" data-ratio="4:5" onclick="setRatio('4:5', 'portrait_4_3')">4:5<br><span style="font-size:0.6rem; opacity:0.7">포스트</span></button>
       </div>
     </div>
 
     <div class="action-guide" id="actionGuide">
-      ⏱️ <b>소요 안내:</b> 이미지 및 비디오 생성 시 퍼블릭 오픈소스 엔진으로 자동 처리됩니다.<br>
-      🎥 <b>스펙:</b> 고속 오픈소스 렌더링 엔진 적용
+      ⏱️ <b>소요 안내:</b> 이미지 약 5~10초 / 비디오 약 3분~5분 (자유롭게 다른 작업 가능)<br>
+      🎥 <b>스펙:</b> Flux.1 실사 렌더링 & MiniMax 720p HD 5초 모션 비디오
     </div>
 
     <div class="btn-group">
@@ -736,11 +736,12 @@
   let currentUser = null;
   let isProUser = false;
   let credits = 100;
-  let selectedWidth = 1024;
-  let selectedHeight = 576;
+  let selectedImageSize = 'landscape_16_9';
   let isGenerating = false;
   let activeCost = 0;
   let abortController = null;
+  const activePolls = new Set();
+  const completingUrls = new Set();
 
   window.onload = async () => {
     if (supabaseClient) {
@@ -754,6 +755,7 @@
           document.getElementById('authOverlay').style.display = 'none';
           await fetchUserProfile();
           await renderHistory();
+          resumePendingPolls();
         }
       });
 
@@ -763,6 +765,7 @@
         document.getElementById('authOverlay').style.display = 'none';
         await fetchUserProfile();
         await renderHistory();
+        resumePendingPolls();
       } else {
         const hasOAuthParams = window.location.search.includes('code=') || window.location.hash.includes('access_token=');
         if (!hasOAuthParams) document.getElementById('authOverlay').style.display = 'flex';
@@ -937,9 +940,8 @@
 
   function setStarterPrompt(p) { document.getElementById('prompt').value = p; }
   function clearPrompt() { document.getElementById('prompt').value = ''; document.getElementById('prompt').focus(); }
-  function setRatio(w, h) {
-    selectedWidth = w;
-    selectedHeight = h;
+  function setRatio(ratioName, apiSize) {
+    selectedImageSize = apiSize;
     document.querySelectorAll('.ratio-btn').forEach(btn => btn.classList.remove('active'));
     event.currentTarget.classList.add('active');
   }
@@ -984,7 +986,6 @@
     }
   }
 
-  // ★ fal.ai 크레딧 충전 필요 없이 공개 퍼블릭 오픈소스 엔진으로 이미지 생성 (이용가이드, 약관, 결제 등 기존 UI 100% 보존)
   async function generateDemoImage() {
     if (isGenerating) { alert('작업 진행 중입니다.'); return; }
     const cost = 10;
@@ -1013,50 +1014,60 @@
 
     downloadArea.style.display = 'none';
     status.innerHTML = `⚡ 이미지 생성 중... <button onclick="cancelGeneration()" style="margin-left:8px; background:#ef4444; color:white; border:none; padding:2px 8px; border-radius:4px; cursor:pointer;">취소</button>`;
-    preview.innerHTML = '<p style="color: #71717a;">이미지 렌더링 중...</p>';
+    preview.innerHTML = '<p style="color: #71717a;">실사 이미지 렌더링 중...</p>';
 
     try {
-      const encodedPrompt = encodeURIComponent(promptInput);
-      const randomSeed = Math.floor(Math.random() * 1000000);
-      const freeImageUrl = `https://image.pollinations.ai/prompt/${encodedPrompt}?width=${selectedWidth}&height=${selectedHeight}&seed=${randomSeed}&nologo=true`;
-
-      const img = new Image();
-      img.src = freeImageUrl;
-      await new Promise((resolve, reject) => {
-        img.onload = resolve;
-        img.onerror = reject;
-        setTimeout(reject, 25000);
+      const response = await fetch('/api/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+        body: JSON.stringify({
+          endpoint: '/fal-ai/flux/dev',
+          bodyData: { prompt: promptInput, image_size: selectedImageSize }
+        }),
+        signal: abortController.signal
       });
 
       if (!isGenerating) return;
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.detail || data.error || JSON.stringify(data));
 
-      isGenerating = false;
-      activeCost = 0;
-      currentImageUrl = freeImageUrl;
-      currentDownloadUrl = currentImageUrl;
-      currentFileType = 'png';
+      if (data.images && data.images.length > 0) {
+        isGenerating = false;
+        activeCost = 0;
+        currentImageUrl = data.images[0].url;
+        currentDownloadUrl = currentImageUrl;
+        currentFileType = 'png';
 
-      const wmDisplay = isProUser ? 'none' : 'block';
-      preview.innerHTML = `<div class="media-wrapper"><img src="${currentImageUrl}"><div class="watermark-overlay" style="display: ${wmDisplay};">NOIR STUDIO</div></div>`;
-      status.innerText = '✅ 이미지 생성 완료!';
-      vidBtn.disabled = false;
-      downloadArea.style.display = 'block';
-      await saveToCloudHistory('IMG', currentImageUrl, promptInput, 'done');
+        const wmDisplay = isProUser ? 'none' : 'block';
+        preview.innerHTML = `<div class="media-wrapper"><img src="${currentImageUrl}"><div class="watermark-overlay" style="display: ${wmDisplay};">NOIR STUDIO</div></div>`;
+        status.innerText = '✅ 이미지 생성 완료!';
+        vidBtn.disabled = false;
+        downloadArea.style.display = 'block';
+        await saveToCloudHistory('IMG', currentImageUrl, promptInput, 'done');
+      } else {
+        throw new Error("이미지 데이터 없음");
+      }
     } catch (err) {
       if (err.name === 'AbortError') return;
       isGenerating = false;
       if (activeCost > 0 && !isProUser) {
         await refundServerCredits(activeCost);
       }
-      status.innerText = '❌ 오류 발생 (사용된 10 크레딧이 자동 환불되었습니다.)';
+      status.innerText = '❌ 오류: ' + err.message + ' (사용된 10 크레딧이 자동 환불되었습니다.)';
       activeCost = 0;
     }
   }
 
-  // ★ fal.ai 충전 필요 없이 비디오 변환 처리
+  function isValidHttpUrl(string) {
+    try {
+      const url = new URL(string);
+      return url.protocol === "http:" || url.protocol === "https:";
+    } catch (_) { return false; }
+  }
+
   async function generateDemoVideo() {
     if (isGenerating) { alert('작업 진행 중입니다.'); return; }
-    if (!currentImageUrl) { alert('먼저 이미지를 생성해주세요!'); return; }
+    if (!currentImageUrl || !isValidHttpUrl(currentImageUrl)) { alert('먼저 유효한 이미지를 생성해주세요!'); return; }
 
     const cost = 50;
     if (!isProUser) {
@@ -1071,27 +1082,27 @@
     isGenerating = true;
     const promptText = document.getElementById('prompt').value.trim() || "Cinematic motion";
     const status = document.getElementById('statusText');
-    const preview = document.getElementById('previewBox');
-    const downloadArea = document.getElementById('downloadArea');
-
-    status.innerText = '🎬 비디오 변환 중... 잠시만 기다려주세요.';
-    preview.innerHTML = '<p style="color: #71717a;">비디오 렌더링 중...</p>';
+    status.innerText = '🎬 비디오 생성 백그라운드 등록 중...';
 
     try {
-      // 무료 퍼블릭 GIF/동영상 엔드포인트 또는 이미지 연동 시뮬레이션 처리
-      await new Promise(resolve => setTimeout(resolve, 5000));
+      const response = await fetch('/api/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+        body: JSON.stringify({ endpoint: '/fal-ai/minimax/video-01', bodyData: { prompt: promptText, image_url: currentImageUrl } })
+      });
 
-      isGenerating = false;
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.detail || data.error || JSON.stringify(data));
+
+      let statusUrl = data.status_url || data.response_url;
+      let rawReqId = data.request_id || data.requestId || data.id;
+      if (!statusUrl && rawReqId) statusUrl = `https://queue.fal.run/fal-ai/minimax/video-01/requests/${rawReqId}`;
+      if (!statusUrl) throw new Error("상태 URL 누락");
+
       activeCost = 0;
-      currentDownloadUrl = currentImageUrl; // 비디오 대체용 이미지 또는 샘플 처리
-      currentFileType = 'mp4';
-
-      const wmDisplay = isProUser ? 'none' : 'block';
-      preview.innerHTML = `<div class="media-wrapper"><img src="${currentImageUrl}"><div class="watermark-overlay" style="display: ${wmDisplay};">NOIR STUDIO</div></div>`;
-      status.innerText = '✅ 비디오 변환 완료!';
-      downloadArea.style.display = 'block';
-      await saveToCloudHistory('VIDEO', currentImageUrl, promptText, 'done');
-      alert('✨ 비디오 변환 완료!');
+      const historyRow = await saveToCloudHistory('VIDEO', statusUrl, promptText, 'processing', cost);
+      status.innerText = `🚀 비디오 생성 백그라운드 진행 중...`;
+      pollVideoInBackground(historyRow ? historyRow.id : null, statusUrl, promptText, cost, true);
     } catch (err) {
       isGenerating = false;
       if (!isProUser && activeCost > 0) {
@@ -1102,6 +1113,62 @@
     }
   }
 
+  async function pollVideoInBackground(historyId, statusUrl, promptText, costAmount, isForeground = false) {
+    if (activePolls.has(statusUrl)) return;
+    activePolls.add(statusUrl);
+
+    const checkInterval = setInterval(async () => {
+      try {
+        const checkRes = await fetch(`/api/generate?endpoint=${encodeURIComponent(statusUrl)}`, { headers: { 'Accept': 'application/json' } });
+        if (!checkRes.ok) return;
+        const checkData = await checkRes.json();
+        const statusUpper = (checkData.status || '').toUpperCase();
+
+        if (statusUpper === 'COMPLETED') {
+          clearInterval(checkInterval);
+          activePolls.delete(statusUrl);
+          isGenerating = false;
+          let resultUrl = statusUrl.endsWith('/status') ? statusUrl.replace(/\/status$/, '') : statusUrl;
+          const resultRes = await fetch(`/api/generate?endpoint=${encodeURIComponent(resultUrl)}`, { headers: { 'Accept': 'application/json' } });
+          const finalData = await resultRes.json();
+          let videoUrl = finalData.video?.url || finalData.output?.video?.url || finalData.url;
+          if (videoUrl) {
+            await updateCloudHistoryStatus(historyId, statusUrl, 'done', videoUrl, promptText, isForeground);
+          } else {
+            await handleVideoFailure(historyId, statusUrl, promptText, costAmount, isForeground);
+          }
+        } else if (statusUpper === 'FAILED' || statusUpper === 'CANCELLED') {
+          clearInterval(checkInterval);
+          activePolls.delete(statusUrl);
+          isGenerating = false;
+          await handleVideoFailure(historyId, statusUrl, promptText, costAmount, isForeground);
+        }
+      } catch (err) { console.error(err); }
+    }, 4000);
+  }
+
+  async function handleVideoFailure(historyId, statusUrl, promptText, costAmount, isForeground) {
+    if (completingUrls.has(statusUrl)) return;
+    completingUrls.add(statusUrl);
+
+    if (currentUser && supabaseClient) {
+      try {
+        if (historyId) await supabaseClient.from('generation_history').delete().eq('id', historyId);
+        await supabaseClient.from('generation_history').insert([{ user_id: currentUser.id, type: 'VIDEO', url: '실패', prompt: promptText || '', status: 'failed' }]);
+        await renderHistory();
+      } catch (e) {}
+    }
+
+    if (!isProUser && costAmount > 0) {
+      await refundServerCredits(costAmount);
+    }
+
+    if (isForeground) {
+      document.getElementById('statusText').innerText = `❌ 비디오 변환 실패 (사용된 ${costAmount} 크레딧이 자동 환불되었습니다.)`;
+      alert(`❌ 비디오 생성에 실패하여 차감된 ${costAmount} 크레딧이 자동 환불되었습니다.`);
+    }
+  }
+
   async function saveToCloudHistory(type, url, promptText, status = 'done', costAmount = 0) {
     if (!currentUser || !supabaseClient) return null;
     try {
@@ -1109,6 +1176,25 @@
       await renderHistory();
       return data;
     } catch (e) { return null; }
+  }
+
+  async function updateCloudHistoryStatus(historyId, statusUrl, status, value, promptText, isForeground = false) {
+    if (!currentUser || !supabaseClient) return;
+    if (completingUrls.has(statusUrl)) return;
+    completingUrls.add(statusUrl);
+    try {
+      if (historyId) await supabaseClient.from('generation_history').delete().eq('id', historyId);
+      await supabaseClient.from('generation_history').insert([{ user_id: currentUser.id, type: 'VIDEO', url: value, prompt: promptText || '', status }]);
+      await renderHistory();
+      if (status === 'done' && isForeground) {
+        currentImageUrl = value; currentDownloadUrl = value; currentFileType = 'mp4';
+        const wmDisplay = isProUser ? 'none' : 'block';
+        document.getElementById('previewBox').innerHTML = `<div class="media-wrapper"><video src="${value}" autoplay loop muted controls></video><div class="watermark-overlay" style="display: ${wmDisplay};">NOIR STUDIO</div></div>`;
+        document.getElementById('downloadArea').style.display = 'block';
+        document.getElementById('statusText').innerText = '✅ 비디오 변환 완료!';
+        alert('✨ 비디오 변환 완료!');
+      }
+    } catch (e) {}
   }
 
   async function deleteHistoryItem(id) {
@@ -1160,8 +1246,16 @@
   function loadHistoryItemFromUrl(url, type) {
     currentImageUrl = url; currentDownloadUrl = url; currentFileType = type === 'VIDEO' ? 'mp4' : 'png';
     const wmDisplay = isProUser ? 'none' : 'block';
-    document.getElementById('previewBox').innerHTML = `<div class="media-wrapper"><img src="${url}"><div class="watermark-overlay" style="display: ${wmDisplay};">NOIR STUDIO</div></div>`;
+    document.getElementById('previewBox').innerHTML = `<div class="media-wrapper">${type === 'VIDEO' ? `<video src="${url}" controls></video>` : `<img src="${url}">`}<div class="watermark-overlay" style="display: ${wmDisplay};">NOIR STUDIO</div></div>`;
     document.getElementById('downloadArea').style.display = 'block';
+  }
+
+  async function resumePendingPolls() {
+    if (!currentUser || !supabaseClient) return;
+    try {
+      const { data: history } = await supabaseClient.from('generation_history').select('*').eq('user_id', currentUser.id).eq('status', 'processing');
+      if (history) history.forEach(item => pollVideoInBackground(item.id, item.url, item.prompt, item.cost || 50, false));
+    } catch (e) {}
   }
 </script>
 
