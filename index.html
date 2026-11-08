@@ -150,6 +150,16 @@
       box-shadow: 0 0 12px var(--accent-glow);
     }
 
+    .prompt-tip {
+      font-size: 0.72rem;
+      color: #a1a1aa;
+      line-height: 1.4;
+      background: #14141c;
+      padding: 6px 10px;
+      border-radius: 6px;
+      border-left: 2px solid var(--accent-purple);
+    }
+
     .ratio-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
     .ratio-btn {
       background: var(--input-bg);
@@ -536,7 +546,10 @@
           <button class="action-text-btn" onclick="applyRandomPrompt()">🎲 무작위 추천</button>
         </div>
       </div>
-      <input type="text" id="prompt" value="A cyberpunk girl, 8k resolution, photorealistic raw photo">
+      <input type="text" id="prompt" placeholder="예: A luxury sports car driving at night..." value="A cyberpunk girl, 8k resolution, photorealistic raw photo">
+      <div class="prompt-tip">
+        💡 <b>작성 팁:</b> 단어만 적기보다는 구체적인 배경, 조명, 화질을 영어로 적어주시면 훨씬 뛰어난 실사 결과물이 생성됩니다. (짧게 입력해도 자동 보정됩니다!)
+      </div>
     </div>
 
     <div class="form-group">
@@ -777,7 +790,6 @@
     } catch (e) { console.error("프로필 동기화 예외:", e); }
   }
 
-  // 안전한 DB RPC 크레딧 차감
   async function deductServerCredits(amount) {
     if (!currentUser || !supabaseClient || isProUser) return true;
     try {
@@ -791,7 +803,6 @@
     }
   }
 
-  // 안전한 DB RPC 크레딧 환불
   async function refundServerCredits(amount) {
     if (!currentUser || !supabaseClient || isProUser || amount <= 0) return;
     try {
@@ -979,11 +990,18 @@
       activeCost = 0;
     }
 
-    const promptInput = document.getElementById('prompt').value.trim();
+    let promptInput = document.getElementById('prompt').value.trim();
     if (!promptInput) {
       if (activeCost > 0 && !isProUser) { await refundServerCredits(activeCost); activeCost = 0; }
       alert('프롬프트를 입력해주세요.');
       return;
+    }
+
+    // 💡 짧은 키워드(예: "스포츠카")만 입력했을 때 자동으로 실사 고화질 프롬프트로 확장해주는 스마트 보정 로직
+    if (promptInput.length < 25 && !promptInput.toLowerCase().includes('photorealistic') && !promptInput.toLowerCase().includes('8k')) {
+      promptInput = `A highly detailed, photorealistic raw photo of ${promptInput}, cinematic lighting, 8k resolution, masterpiece`;
+    } else {
+      promptInput += ", highly detailed, photorealistic, 8k resolution";
     }
 
     isGenerating = true;
@@ -1003,7 +1021,7 @@
         headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
         body: JSON.stringify({
           endpoint: '/fal-ai/flux/dev',
-          bodyData: { prompt: promptInput + ", highly detailed, photorealistic, 8k resolution", image_size: selectedImageSize }
+          bodyData: { prompt: promptInput, image_size: selectedImageSize }
         }),
         signal: abortController.signal
       });
